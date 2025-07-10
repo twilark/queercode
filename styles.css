@@ -1,0 +1,33 @@
+.queercode-emoji {
+  display: inline-block !important;
+  width: 1.3em !important;
+  height: 1.3em !important;
+  max-width: 1.5em !important;
+  max-height: 1.5em !important;
+  vertical-align: text-bottom !important;
+  object-fit: contain !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+/* Improve header emoji alignment and scale */
+:is(h1) .queercode-emoji {
+  height: 1.1em !important;
+  width: auto !important;
+  vertical-align: text-bottom !important;
+  position: relative;
+  top: -0.12em;
+}
+:is(h2, h3, h4) .queercode-emoji {
+  height: 1.1em !important;
+  width: auto !important;
+  vertical-align: middle !important;
+  position: relative;
+  top: -0.2em;
+}
+:is(h5, h6) .queercode-emoji {
+  height: 1em !important;
+  width: auto !important;
+  vertical-align: middle !important;
+  position: relative;
+  top: -0.15em;
+}
