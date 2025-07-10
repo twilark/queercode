@@ -1,14 +1,14 @@
-# queercode 🤍
+# queercode 🌈
 
-**Custom emoji shortcodes for Obsidian**, styled for visibility, queerness, and maximum slay.
+**Custom emoji shortcodes for Obsidian**, styled for visibility, fun, and flair.
 
 This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` directly in Obsidian notes. These render as inline emoji PNGs, styled to look good in both normal and header text.
 
 > [!NOTE]
 > **Who is this for?** 
-> - Obsidian users who value colorful emoji in their visual hierarchy and notetaking  
-> - And who are constrained by their device / environment's capacity to display specific Unicode characters cleanly within Obsidian (i.e., stubborn Win10 users 💜)  
-> - And/or who are unsatisfied with Twemoji-as-default, or the shortcodes imposed by e.g. Iconize  
+> - Obsidian users who value colorful emoji in their visual hierarchy and notetaking,  
+> - Who are constrained by their device's ability to display specific Unicode characters cleanly within Obsidian (i.e. stubborn Win10 users 💜)  
+> - And/or who are unsatisfied with Twemoji-as-default, or the shortcodes imposed by e.g. Iconic  
 
 ---
 
@@ -73,7 +73,7 @@ npm run generate-emoji-map
 - [ ] Fix HTML parse edge cases (e.g. some `span` nesting gets eaten)
 - [ ] Add support for emoji hover titles / screen readers
 - [ ] Add support for `:emoji::label:` dual-mode?
-- [ ] Optional fallback font if PNG not found
+- [ ] Optional fallback if PNG not found
 - [ ] Drag-and-drop UI for managing emoji settings in panel
 - [ ] Enable default skintone selection for body/human emoji (during or after map generation) -- e.g. green instead of yellow
 - [ ] Fuzzy leading text / search for shortcodes; autocomplete
@@ -87,5 +87,5 @@ npm run generate-emoji-map
 
 ## License
 
-Mutant Standard: [CC BY-NC-SA 4.0 Int'l](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+Mutant Standard: [CC BY-NC-SA 4.0 Int'l](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
 Plugin: [MIT](https://tlo.mit.edu/understand-ip/exploring-mit-open-source-license-comprehensive-guide)
