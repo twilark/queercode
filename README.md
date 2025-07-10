@@ -4,11 +4,11 @@
 
 This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` directly in Obsidian notes. These render as inline emoji PNGs, styled to look good in both normal and header text.
 
-> [!NOTE] Who is this for?
->
-> - Obsidian users who value colorful emoji in their visual hierarchy and notetaking
-> - And who are constrained by their device / environment's capacity to display specific Unicode characters cleanly within Obsidian (i.e., stubborn Win10 users 💜)
-> - And/or who are unsatisfied with Twemoji-as-default, or the shortcodes imposed by e.g. Iconize
+> [!NOTE]
+> **Who is this for?** 
+> - Obsidian users who value colorful emoji in their visual hierarchy and notetaking  
+> - And who are constrained by their device / environment's capacity to display specific Unicode characters cleanly within Obsidian (i.e., stubborn Win10 users 💜)  
+> - And/or who are unsatisfied with Twemoji-as-default, or the shortcodes imposed by e.g. Iconize  
 
 ---
 
@@ -31,8 +31,6 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
    npm install
    npm run build
    ```
-
-```
 3. Enable the plugin in Obsidian.  If you don't see it, ensure Community Plugins are enabled.
 
 ---
@@ -40,14 +38,12 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 ### Directory layout
 
 ```
-
 queercode/
 ├── main.ts # Core plugin logic
 ├── style.css # Emoji rendering styles
 ├── generate-emoji-map.js # Script to auto-generate emoji-map
 ├── emoji-map.json # Generated emoji shortcode map
 └── emojis/ # PNG emoji images
-
 ````
 ---
 
