@@ -1,5 +1,12 @@
+# Node dependencies
 node_modules/
-main.js
+
+# Build output
+
+# OS / editor junk
 .DS_Store
-*.log
-queercode-testing/
+Thumbs.db
+
+# Obsidian internal
+.obsidian/
+workspace.json
