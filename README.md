@@ -4,7 +4,8 @@
 
 This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` directly in Obsidian notes. These render as inline emoji PNGs, styled to look good in both normal and header text.
 
-> [!NOTE] > **Who is this for?**
+> [!NOTE] >
+> **Who is this for?**
 >
 > - Obsidian users who value colorful emoji in their visual hierarchy and notetaking,
 > - Who are constrained by their device's ability to display specific Unicode characters cleanly within Obsidian (i.e. stubborn Win10 users 💜)
@@ -14,9 +15,10 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 
 ## ✨ Features
 
-- Define custom emoji with PNGs and shortcodes.
+- Define custom emoji with shortcodes.
+- Enforce a preferred filetype from Settings, if an emoji exists in both formats.
 - Autogenerate emoji map from folder of images.
-- Consistent styling across headers, text, and tables.
+- Consistent styling across headers, text, callouts and tables.
 - No special syntax — just `:your_emoji:`.
 
 ---
@@ -63,11 +65,11 @@ npm run generate-emoji-map
 
 ## 📌 Notes
 
-- Your images **must** be `.png` or `.svg` format
+- Your images **must** be `.png` or `.svg` format.
 - Filenames become shortcodes automatically: bisexual_flag.png`→`:bisexual_flag:`
 - These shortcodes can be safely changed, but user is responsible for ensuring unique entries.
 - Existing entries in `emoji-map.json` won't be overwritten. If you've changed a mapped emoji, it should not overwrite.
-- **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation for emoji coverage.
+- **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation.
 
 ---
 
