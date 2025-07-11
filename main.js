@@ -23,10 +23,37 @@ __export(main_exports, {
   default: () => QueercodePlugin
 });
 module.exports = __toCommonJS(main_exports);
+var import_obsidian2 = require("obsidian");
+
+// settings.ts
 var import_obsidian = require("obsidian");
-var QueercodePlugin = class extends import_obsidian.Plugin {
+var DEFAULT_SETTINGS = {
+  filetypePreference: "svg"
+};
+var QueercodeSettingTab = class extends import_obsidian.PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    containerEl.createEl("h2", { text: "Queercode Settings" });
+    new import_obsidian.Setting(containerEl).setName("Preferred emoji filetype").setDesc("Choose which file type to use when both SVG and PNG exist.").addDropdown(
+      (dropdown) => dropdown.addOption("svg", "SVG (recommended)").addOption("png", "PNG").addOption("auto", "Auto-detect (prefer SVG, fallback to PNG)").setValue(this.plugin.settings.filetypePreference).onChange(async (value) => {
+        this.plugin.settings.filetypePreference = value;
+        await this.plugin.saveSettings();
+      })
+    );
+  }
+};
+
+// main.ts
+var QueercodePlugin = class extends import_obsidian2.Plugin {
   async onload() {
     console.log("Queercode plugin loaded");
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.addSettingTab(new QueercodeSettingTab(this.app, this));
     const emojiMap = await this.loadEmojiMap();
     const shortcodeRegex = new RegExp(
       Object.keys(emojiMap).map((k) => k.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")).join("|"),
@@ -41,12 +68,15 @@ var QueercodePlugin = class extends import_obsidian.Plugin {
             if (!node.parentElement) return NodeFilter.FILTER_REJECT;
             const forbidden = ["CODE", "PRE", "A", "STYLE"];
             let current2 = node.parentElement;
-            while (current2) {
-              if (forbidden.includes(current2.tagName)) return NodeFilter.FILTER_REJECT;
+            while (current2 !== null) {
+              if (forbidden.includes(current2.tagName)) {
+                return NodeFilter.FILTER_REJECT;
+              }
               current2 = current2.parentElement;
             }
             return NodeFilter.FILTER_ACCEPT;
           }
+          // Accept nodes allowed for emoji replacement
         }
       );
       const targets = [];
@@ -67,7 +97,10 @@ var QueercodePlugin = class extends import_obsidian.Plugin {
           if (parts[i]) frag.appendChild(document.createTextNode(parts[i]));
           if (matches[i]) {
             const url = emojiMap[matches[i]];
-            if (!url) continue;
+            if (!url || !url.endsWith(".png") && !url.endsWith(".svg")) {
+              console.warn(`Skipping emoji: ${matches[i]} (bad or unsupported file: ${url})`);
+              continue;
+            }
             const img = document.createElement("img");
             img.src = this.app.vault.adapter.getResourcePath(`${this.manifest.dir}/emoji/${url}`);
             img.alt = matches[i];
@@ -83,8 +116,13 @@ var QueercodePlugin = class extends import_obsidian.Plugin {
       }
     });
   }
+  // Load emoji mapping JSON file from plugin directory
   async loadEmojiMap() {
     const file = await this.app.vault.adapter.read(`${this.manifest.dir}/emoji-map.json`);
     return JSON.parse(file);
+  }
+  // Save plugin settings
+  async saveSettings() {
+    await this.saveData(this.settings);
   }
 };
