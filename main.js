@@ -23,7 +23,7 @@ __export(main_exports, {
   default: () => QueercodePlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // settings.ts
 var import_obsidian = require("obsidian");
@@ -48,13 +48,59 @@ var QueercodeSettingTab = class extends import_obsidian.PluginSettingTab {
   }
 };
 
+// suggest.ts
+var import_obsidian2 = require("obsidian");
+var EmojiSuggest = class extends import_obsidian2.EditorSuggest {
+  constructor(app, plugin, emojiMap) {
+    super(app);
+    this.plugin = plugin;
+    this.emojiMap = emojiMap;
+  }
+  onTrigger(cursor, editor, file) {
+    const line = editor.getLine(cursor.line);
+    const match = /(?:^|\s):([\w\-_]+)$/.exec(line.substring(0, cursor.ch));
+    if (match) {
+      return {
+        start: {
+          line: cursor.line,
+          ch: match.index + (match[0].startsWith(":") ? 0 : 1)
+        },
+        end: cursor,
+        query: match[1]
+      };
+    }
+    return null;
+  }
+  getSuggestions(context) {
+    const query = context.query.toLowerCase();
+    return Object.entries(this.emojiMap).filter(([key]) => key.toLowerCase().includes(query)).slice(0, 20).map(([shortcode, file]) => ({ shortcode, file }));
+  }
+  renderSuggestion(entry, el) {
+    el.addClass("emoji-suggest-item");
+    const img = document.createElement("img");
+    img.src = this.plugin.app.vault.adapter.getResourcePath(`${this.plugin.manifest.dir}/emoji/${entry.file}`);
+    img.className = "queercode-emoji";
+    el.appendChild(img);
+    const span = document.createElement("span");
+    span.textContent = ` ${entry.shortcode}`;
+    el.appendChild(span);
+  }
+  selectSuggestion(entry, evt) {
+    const editor = this.app.workspace.activeEditor?.editor;
+    if (!editor) return;
+    editor.replaceRange(entry.shortcode, this.context.start, this.context.end);
+  }
+};
+
 // main.ts
-var QueercodePlugin = class extends import_obsidian2.Plugin {
+var QueercodePlugin = class extends import_obsidian3.Plugin {
   async onload() {
     console.log("Queercode plugin loaded");
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     this.addSettingTab(new QueercodeSettingTab(this.app, this));
     const emojiMap = await this.loadEmojiMap();
+    const emojiSuggest = new EmojiSuggest(this.app, this, emojiMap);
+    this.registerEditorSuggest(emojiSuggest);
     const shortcodeRegex = new RegExp(
       Object.keys(emojiMap).map((k) => k.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")).join("|"),
       "g"

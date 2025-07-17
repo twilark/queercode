@@ -1,5 +1,6 @@
 import { Plugin } from "obsidian";
 import { QueercodeSettings, DEFAULT_SETTINGS, QueercodeSettingTab } from "./settings";
+import { EmojiSuggest } from "./suggest";
 
 export default class QueercodePlugin extends Plugin {
   settings!: QueercodeSettings;
@@ -15,6 +16,12 @@ export default class QueercodePlugin extends Plugin {
 
     // Load emoji map JSON from vault directory
     const emojiMap = await this.loadEmojiMap();
+
+    // Register emoji suggestion provider
+    const emojiSuggest = new EmojiSuggest(this.app, this, emojiMap);
+    this.registerEditorSuggest(emojiSuggest);
+
+
 
     // Build regex to match any shortcode keys (escaped)
     const shortcodeRegex = new RegExp(

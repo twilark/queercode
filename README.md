@@ -2,7 +2,7 @@
 
 **Custom emoji shortcodes for Obsidian**, styled for visibility, fun, and flair.
 
-This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` directly in Obsidian notes. These render as inline emoji PNGs, styled to look good in both normal and header text.
+This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` directly in Obsidian notes. These render as inline emoji PNGs or SVGs, styled to look good in normal text, headers, callouts, and tables.
 
 > [!NOTE]  
 > **Who is this for?**
@@ -15,11 +15,12 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 
 ## ✨ Features
 
-- Define custom emoji with shortcodes.
-- Enforce a preferred filetype from Settings, if an emoji exists in both formats.
-- Autogenerate emoji map from folder of images.
-- Consistent styling across headers, text, callouts and tables.
-- No special syntax — just `:your_emoji:`.
+- Define and use custom emoji with easy `:shortcode:` syntax—no special commands
+- Autocomplete suggestions activate as you type shortcodes (e.g., type `:f` to see all matches with previews, and insert `:furry_pride:` at your cursor)
+- Preferred filetype selection when emojis exist as both PNG and SVG
+- Auto-generated emoji map from your emoji image folder
+- Consistent styling everywhere
+- Supports `.png` and `.svg` emoji images
 
 ---
 
@@ -41,11 +42,13 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 
 ```
 queercode/
-├── main.ts # Core plugin logic
-├── style.css # Emoji rendering styles
-├── generate-emoji-map.js # Script to auto-generate emoji-map
-├── emoji-map.json # Generated emoji shortcode map
-└── emojis/ # PNG emoji images
+├── main.ts           # Core plugin logic
+├── suggest.ts        # Autocomplete
+├── style.css         # Emoji rendering styles
+├── generate-emoji-map.js # Script to auto-generate emoji-map.json
+├── emoji-map.json    # Generated shortcode → filename map
+└── emojis/           # Emoji PNG and SVG images
+
 ```
 
 ---
@@ -66,7 +69,7 @@ npm run generate-emoji-map
 ## 📌 Notes
 
 - Your images **must** be `.png` or `.svg` format.
-- Filenames become shortcodes automatically: bisexual_flag.png`→`:bisexual_flag:`
+- Filenames become shortcodes automatically: bisexual_flag.png`→`:bisexual_flag:` Autocomplete triggers only after typing at least one character after`:`.
 - These shortcodes can be safely changed, but user is responsible for ensuring unique entries.
 - Existing entries in `emoji-map.json` won't be overwritten. If you've changed a mapped emoji, it should not overwrite.
 - **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation.
@@ -76,12 +79,12 @@ npm run generate-emoji-map
 ## 📋 Roadmap / TODO
 
 - [ ] Fix HTML parse edge cases (e.g. some `span` nesting gets eaten)
-- [ ] Fuzzy leading text / search for shortcodes; autocomplete
-- [ ] Add support for emoji hover titles / screen readers
-- [ ] Add support for `:emoji::label:` dual-mode?
-- [ ] Optional fallback if image file not found
-- [ ] Drag-and-drop UI for managing emoji settings in panel
-- [ ] Enable default skintone selection for body/human emoji (during or after map generation) -- e.g. green instead of yellow
+- [ ] Implement fuzzy search/autocomplete for easier lookup
+- [ ] Add emoji hover titles for accessibility
+- [ ] Support combined emoji+label syntax (e.g., `:emoji::label:`)
+- [ ] Optional fallback behavior if emoji image is missing
+- [ ] Drag-and-drop UI to manage emoji packs in plugin settings
+- [ ] Skintone selection for human emojis during map generation
 
 ---
 
