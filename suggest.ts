@@ -1,4 +1,4 @@
-import { App, EditorPosition, TFile, Plugin, Editor, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo } from "obsidian";
+import { App, Notice, EditorPosition, TFile, Plugin, Editor, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo } from "obsidian";
 import fuzzysort from "fuzzysort";
 
 export interface EmojiEntry {
@@ -10,6 +10,14 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
   plugin: Plugin;
   emojiMap: Record<string, string>;
   availableEmojiFiles: Set<string>;
+private emojiContext: {
+  editor: Editor;
+  start: EditorPosition;
+  end: EditorPosition;
+} | null = null;
+
+
+
 
   constructor(app: App, plugin: Plugin, emojiMap: Record<string, string>, availableEmojiFiles: Set<string>) {
     super(app);
@@ -20,21 +28,27 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
 
 
 
-  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile): EditorSuggestTriggerInfo | null {
-    const line = editor.getLine(cursor.line);
-    const match = /(?:^|\s):([\w\-_]+)$/.exec(line.substring(0, cursor.ch));
-    if (match) {
-      return {
-        start: {
-          line: cursor.line,
-          ch: match.index + (match[0].startsWith(":") ? 0 : 1)
-        },
-        end: cursor,
-        query: match[1]
-      };
-    }
-    return null;
-  }
+  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile) {
+  const line = editor.getLine(cursor.line);
+  const match = line.substring(0, cursor.ch).match(/(?:^|\s)(:\w*)$/);
+  if (!match) return null;
+
+  const triggerStart = cursor.ch - match[1].length;
+
+  this.emojiContext = {
+    editor,
+    start: { line: cursor.line, ch: triggerStart },
+    end: cursor,
+  };
+
+  return {
+    start: this.emojiContext.start,
+    end: this.emojiContext.end,
+    query: match[1],
+  };
+}
+
+
 
   getSuggestions(context: EditorSuggestContext): EmojiEntry[] {
     const query = context.query.toLowerCase();
@@ -67,9 +81,12 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
     el.appendChild(span);
   }
 
-  selectSuggestion(entry: EmojiEntry, evt: MouseEvent | KeyboardEvent): void {
-    const editor = this.app.workspace.activeEditor?.editor;
-    if (!editor) return;
-    editor.replaceRange(entry.shortcode, this.context!.start, this.context!.end);
-  }
+selectSuggestion(entry: EmojiEntry) {
+  if (!this.emojiContext) return;
+
+  const { editor, start, end } = this.emojiContext;
+  editor.replaceRange(entry.shortcode, start, end);
+  this.emojiContext = null;
+}
+
 }

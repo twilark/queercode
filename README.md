@@ -14,12 +14,11 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 
 ## ✨ Features
 
-- Define and use custom emoji with easy `:shortcode:` syntax—no special commands
-- Autocomplete suggestions activate as you type shortcodes (e.g., type `:f` to see all matches with previews, and insert `:furry_pride:` at your cursor)
-- Preferred filetype selection when emojis exist as both PNG and SVG
-- Auto-generated emoji map from your emoji image folder
-- Consistent styling everywhere
-- Supports `.png` and `.svg` emoji images
+- Define and use custom emoji with easy `:shortcode:` syntax, auto-generated emoji map from your emoji image folder
+- Autocomplete suggestions activate as you type shortcodes
+- Consistent styling across various contexts, including tables, headers, callouts, and footnotes
+- Emojis render with ARIA labels and other attributes
+- Supports `.png` and `.svg` emoji images; set your preferred default in settings
 
 ---
 
@@ -54,7 +53,7 @@ queercode/
 
 ## 🛠 Adding New Emojis
 
-1. Drop PNGs into `data/emojis/`.
+1. Drop PNGs into `queercode/emojis/`.
 2. Run:
 
 ```bash
@@ -70,6 +69,7 @@ npm run generate-emoji-map
 - Your images **must** be `.png` or `.svg` format
 - Filenames become shortcodes automatically: `bisexual_flag.png` → `:bisexual_flag:` Autocomplete triggers only after typing at least one character after `:`
 - These shortcodes can be safely changed, but user is responsible for ensuring unique entries
+- Emoji rendering is not available within codeblocks (suggestions will show for inline code)
 - Custom entries in `emoji-map.json` should not be overwritten even if the map must be regenerated
 - **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation
 
@@ -77,13 +77,11 @@ npm run generate-emoji-map
 
 ## 📋 Roadmap / TODO
 
-- [ ] Fix HTML parse edge cases (e.g. some `span` nesting gets eaten)
+- [ ] Expand plugin settings to allow user control over `emoji-map.json` generation within Obsidian
+- [ ] Allow user settings to expand or restrict context usage (e.g. within codeblocks)
 - [ ] Support combined emoji+label syntax (e.g., `:emoji::label:`)
-- [ ] Optional fallback behavior if emoji image is missing
 - [ ] Drag-and-drop UI to manage emoji packs in plugin settings
-- [ ] Skintone selection for human emojis during map generation
-- [x] Implement fuzzy search/autocomplete for easier lookup
-- [x] Add emoji hover titles for accessibility
+- [ ] Skintone selection for humanoid emojis during map generation
 
 ---
 

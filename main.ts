@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Plugin, Notice } from "obsidian";
 import { QueercodeSettings, DEFAULT_SETTINGS, QueercodeSettingTab } from "./settings";
 import { EmojiSuggest } from "./suggest";
 
@@ -20,7 +20,11 @@ export default class QueercodePlugin extends Plugin {
     // After loading emojiMap:
     const emojiFolder = `${this.manifest.dir}/emoji`;
     const files = await this.app.vault.adapter.list(emojiFolder);
-    const availableEmojiFiles = new Set(files.files.map(f => f.split("/").pop()));
+    const availableEmojiFiles = new Set(
+      files.files
+        .map(f => f.split("/").pop())
+        .filter((f): f is string => f !== undefined)
+    );
 
     // Register emoji suggestion provider
     const emojiSuggest = new EmojiSuggest(this.app, this, emojiMap, availableEmojiFiles);
