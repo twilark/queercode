@@ -3,11 +3,14 @@
   "version": "0.0.1",
   "scripts": {
     "build": "esbuild main.ts --bundle --outfile=main.js --format=cjs --target=es2020 --platform=node --external:obsidian",
-	"generate-emoji-map": "node generate-emoji-map.js"
+    "generate-emoji-map": "node generate-emoji-map.js"
   },
   "devDependencies": {
     "esbuild": "^0.25.5",
     "obsidian": "^1.8.7",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "fuzzysort": "^3.1.0"
   }
 }

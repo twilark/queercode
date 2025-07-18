@@ -4,8 +4,7 @@
 
 This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` directly in Obsidian notes. These render as inline emoji PNGs or SVGs, styled to look good in normal text, headers, callouts, and tables.
 
-> [!NOTE]  
-> **Who is this for?**
+> [!NOTE] > **Who is this for?**
 >
 > - Obsidian users who value colorful emoji in their visual hierarchy and notetaking,
 > - Who are constrained by their device's ability to display specific Unicode characters cleanly within Obsidian (i.e. stubborn Win10 users 💜)
@@ -68,30 +67,31 @@ npm run generate-emoji-map
 
 ## 📌 Notes
 
-- Your images **must** be `.png` or `.svg` format.
-- Filenames become shortcodes automatically: bisexual_flag.png`→`:bisexual_flag:` Autocomplete triggers only after typing at least one character after`:`.
-- These shortcodes can be safely changed, but user is responsible for ensuring unique entries.
-- Existing entries in `emoji-map.json` won't be overwritten. If you've changed a mapped emoji, it should not overwrite.
-- **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation.
+- Your images **must** be `.png` or `.svg` format
+- Filenames become shortcodes automatically: `bisexual_flag.png` → `:bisexual_flag:` Autocomplete triggers only after typing at least one character after `:`
+- These shortcodes can be safely changed, but user is responsible for ensuring unique entries
+- Custom entries in `emoji-map.json` should not be overwritten even if the map must be regenerated
+- **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation
 
 ---
 
 ## 📋 Roadmap / TODO
 
 - [ ] Fix HTML parse edge cases (e.g. some `span` nesting gets eaten)
-- [ ] Implement fuzzy search/autocomplete for easier lookup
-- [ ] Add emoji hover titles for accessibility
 - [ ] Support combined emoji+label syntax (e.g., `:emoji::label:`)
 - [ ] Optional fallback behavior if emoji image is missing
 - [ ] Drag-and-drop UI to manage emoji packs in plugin settings
 - [ ] Skintone selection for human emojis during map generation
+- [x] Implement fuzzy search/autocomplete for easier lookup
+- [x] Add emoji hover titles for accessibility
 
 ---
 
 ## Credits
 
-- PNG emoji art by [MutantStandard](https://mutant.tech/)
-- Plugin skeleton based on Obsidian plugin + esbuild boilerplate.
+- [MutantStandard](https://mutant.tech/) is the phenomenal work of Caius Nocturne
+- EditorSuggest utilizes [fuzzysort](https://github.com/farzher/fuzzysort)
+- Plugin skeleton based on Obsidian plugin + esbuild boilerplate
 
 ## License
 

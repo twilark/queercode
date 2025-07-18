@@ -17,8 +17,13 @@ export default class QueercodePlugin extends Plugin {
     // Load emoji map JSON from vault directory
     const emojiMap = await this.loadEmojiMap();
 
+    // After loading emojiMap:
+    const emojiFolder = `${this.manifest.dir}/emoji`;
+    const files = await this.app.vault.adapter.list(emojiFolder);
+    const availableEmojiFiles = new Set(files.files.map(f => f.split("/").pop()));
+
     // Register emoji suggestion provider
-    const emojiSuggest = new EmojiSuggest(this.app, this, emojiMap);
+    const emojiSuggest = new EmojiSuggest(this.app, this, emojiMap, availableEmojiFiles);
     this.registerEditorSuggest(emojiSuggest);
 
 
@@ -94,12 +99,32 @@ export default class QueercodePlugin extends Plugin {
               console.warn(`Skipping emoji: ${matches[i]} (bad or unsupported file: ${url})`);
               continue;
             }
+// Function to convert shortcode to readable label for SRs
+function readableLabel(shortcode: string): string {
+  return shortcode
+    .replace(/^:/, "")
+    .replace(/_+/g, " ")
+    .replace(/:$/, "")
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
 
-            const img = document.createElement("img");
-            img.src = this.app.vault.adapter.getResourcePath(`${this.manifest.dir}/emoji/${url}`);
-            img.alt = matches[i];
-            img.className = "queercode-emoji";
-            frag.appendChild(img);
+const label = readableLabel(matches[i]);
+
+// Create image element for emoji, based on readable label
+const img = document.createElement("img");
+img.src = this.app.vault.adapter.getResourcePath(`${this.manifest.dir}/emoji/${url}`);
+img.alt = label;
+img.title = matches[i];
+img.setAttribute("aria-label", label); // ARIA label for screen readers
+img.setAttribute("role", "img"); // ARIA role for image
+img.className = "queercode-emoji";
+
+// Optional: only if fallback is always-on, or check a setting here
+img.onerror = () => {
+  img.replaceWith(document.createTextNode(matches[i]));
+};
+
+frag.appendChild(img);
           }
         }
 
@@ -115,8 +140,17 @@ export default class QueercodePlugin extends Plugin {
 
   // Load emoji mapping JSON file from plugin directory
   async loadEmojiMap(): Promise<Record<string, string>> {
-    const file = await this.app.vault.adapter.read(`${this.manifest.dir}/emoji-map.json`);
-    return JSON.parse(file);
+    try {
+      const file = await this.app.vault.adapter.read(`${this.manifest.dir}/emoji-map.json`);
+      return JSON.parse(file);
+    } catch (e: any) {
+      if (e instanceof SyntaxError) {
+        console.warn("emoji-map.json contains invalid JSON. Please fix or regenerate the file.", e);
+      } else {
+        console.warn("Could not load emoji-map.json (file missing or unreadable).", e);
+      }
+      return {};
+    }
   }
 
   // Save plugin settings

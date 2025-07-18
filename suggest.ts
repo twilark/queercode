@@ -1,5 +1,5 @@
 import { App, EditorPosition, TFile, Plugin, Editor, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo } from "obsidian";
-
+import fuzzysort from "fuzzysort";
 
 export interface EmojiEntry {
   shortcode: string;
@@ -9,11 +9,13 @@ export interface EmojiEntry {
 export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
   plugin: Plugin;
   emojiMap: Record<string, string>;
+  availableEmojiFiles: Set<string>;
 
-  constructor(app: App, plugin: Plugin, emojiMap: Record<string, string>) {
+  constructor(app: App, plugin: Plugin, emojiMap: Record<string, string>, availableEmojiFiles: Set<string>) {
     super(app);
     this.plugin = plugin;
     this.emojiMap = emojiMap;
+    this.availableEmojiFiles = availableEmojiFiles;
   }
 
 
@@ -36,11 +38,22 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
 
   getSuggestions(context: EditorSuggestContext): EmojiEntry[] {
     const query = context.query.toLowerCase();
-    return Object.entries(this.emojiMap)
-      .filter(([key]) => key.toLowerCase().includes(query))
-      .slice(0, 20) // limit suggestions
-      .map(([shortcode, file]) => ({ shortcode, file }));
+    const emojiShortcodes = Object.keys(this.emojiMap); // [":bee:", ":rainbow:", ...]
+
+    // Only include shortcodes whose file exists in the emoji folder
+    const filteredShortcodes = emojiShortcodes.filter(
+      shortcode => this.availableEmojiFiles.has(this.emojiMap[shortcode])
+    );
+
+    // Fuzzy search with a limit of 20
+    const results = fuzzysort.go(query, filteredShortcodes, { limit: 20 });
+
+    return results.map(res => ({
+      shortcode: res.target,
+      file: this.emojiMap[res.target]
+    }));
   }
+
 
   renderSuggestion(entry: EmojiEntry, el: HTMLElement): void {
     el.addClass("emoji-suggest-item");
