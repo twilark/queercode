@@ -4,7 +4,8 @@
 
 This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` directly in Obsidian notes. These render as inline emoji PNGs or SVGs, styled to look good in normal text, headers, callouts, and tables.
 
-> [!NOTE] > **Who is this for?**
+> [!NOTE]
+> **Who is this for?**
 >
 > - Obsidian users who value colorful emoji in their visual hierarchy and notetaking,
 > - Who are constrained by their device's ability to display specific Unicode characters cleanly within Obsidian (i.e. stubborn Win10 users 💜)
