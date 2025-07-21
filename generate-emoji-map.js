@@ -20,7 +20,10 @@ async function generateEmojiMap() {
     allowedExtensions.includes(path.extname(f).toLowerCase())
   );
   if (validFiles.length === 0) {
-    console.log("No valid emoji files found.");
+    console.log(
+      "No valid emoji files found. Currently supported extensions are: " +
+        allowedExtensions.join(", ")
+    );
     return;
   }
 

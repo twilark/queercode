@@ -6,7 +6,7 @@ export default class QueercodePlugin extends Plugin {
   settings!: QueercodeSettings;
 
   async onload() {
-    console.log("Queercode plugin loaded"); // Logs plugin load
+    console.log("Queercode plugin loaded"); // Log plugin on load
 
     // Load stored settings or use defaults
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -17,7 +17,11 @@ export default class QueercodePlugin extends Plugin {
     // Load emoji map JSON from vault directory
     const emojiMap = await this.loadEmojiMap();
 
-    // After loading emojiMap:
+    // Check if emoji folder exists and gather available files
+    if (!emojiMap || Object.keys(emojiMap).length === 0) {
+      new Notice("No emoji map found. Please ensure emoji-map.json exists in the plugin directory.");
+      return;
+    }
     const emojiFolder = `${this.manifest.dir}/emoji`;
     const files = await this.app.vault.adapter.list(emojiFolder);
     const availableEmojiFiles = new Set(
@@ -26,7 +30,11 @@ export default class QueercodePlugin extends Plugin {
         .filter((f): f is string => f !== undefined)
     );
 
-    // Register emoji suggestion provider
+    // Register the emoji suggestion system
+    if (!availableEmojiFiles.size) {
+      new Notice("No emoji files found in the plugin's emoji directory.");
+      return;
+    }
     const emojiSuggest = new EmojiSuggest(this.app, this, emojiMap, availableEmojiFiles);
     this.registerEditorSuggest(emojiSuggest);
 
@@ -41,7 +49,7 @@ export default class QueercodePlugin extends Plugin {
     );
 
     // Markdown post processor — runs on rendered markdown elements
-    this.registerMarkdownPostProcessor(async (el, ctx) => {
+    this.registerMarkdownPostProcessor(async (el) => {
       // Create TreeWalker to iterate text nodes excluding certain tags
       const walker = document.createTreeWalker(
         el,
@@ -62,7 +70,6 @@ export default class QueercodePlugin extends Plugin {
 
                 return NodeFilter.FILTER_ACCEPT;
               }
-               // Accept nodes allowed for emoji replacement
           }
       );
 
@@ -70,11 +77,13 @@ export default class QueercodePlugin extends Plugin {
       const targets: Text[] = [];
       let current: Text | null = walker.nextNode() as Text;
       while (current) {
+        shortcodeRegex.lastIndex = 0;
         if (shortcodeRegex.test(current.nodeValue || "")) {
           targets.push(current);
         }
         current = walker.nextNode() as Text;
       }
+
 
       // For each target text node, replace shortcodes with emoji images
       for (const node of targets) {
@@ -83,6 +92,7 @@ export default class QueercodePlugin extends Plugin {
 
         // Split text on shortcode boundaries and find all matches
         const parts = (node.nodeValue || "").split(shortcodeRegex);
+        shortcodeRegex.lastIndex = 0;
         const matches = (node.nodeValue || "").match(shortcodeRegex) || [];
 
         const frag = document.createDocumentFragment();
@@ -94,50 +104,25 @@ export default class QueercodePlugin extends Plugin {
           // Add emoji image for matched shortcode
           if (matches[i]) {
             const url = emojiMap[matches[i]];
-
-            // Skip if no URL or unsupported filetype
-            if (
-              !url ||
-              (!url.endsWith(".png") && !url.endsWith(".svg"))
-            ) {
-              console.warn(`Skipping emoji: ${matches[i]} (bad or unsupported file: ${url})`);
+            if (!url || (!url.endsWith(".png") && !url.endsWith(".svg"))) {
+              frag.appendChild(document.createTextNode(matches[i]));
               continue;
             }
-// Function to convert shortcode to readable label for SRs
-function readableLabel(shortcode: string): string {
-  return shortcode
-    .replace(/^:/, "")
-    .replace(/_+/g, " ")
-    .replace(/:$/, "")
-    .replace(/\b\w/g, c => c.toUpperCase());
-}
-
-const label = readableLabel(matches[i]);
-
-// Create image element for emoji, based on readable label
-const img = document.createElement("img");
-img.src = this.app.vault.adapter.getResourcePath(`${this.manifest.dir}/emoji/${url}`);
-img.alt = label;
-img.title = matches[i];
-img.setAttribute("aria-label", label); // ARIA label for screen readers
-img.setAttribute("role", "img"); // ARIA role for image
-img.className = "queercode-emoji";
-
-// Optional: only if fallback is always-on, or check a setting here
-img.onerror = () => {
-  img.replaceWith(document.createTextNode(matches[i]));
-};
-
-frag.appendChild(img);
+            const label = matches[i].replace(/^:/, "").replace(/_+/g, " ").replace(/:$/, "");
+            const img = document.createElement("img");
+            img.src = this.app.vault.adapter.getResourcePath(`${this.manifest.dir}/emoji/${url}`);
+            img.alt = label;
+            img.title = matches[i];
+            img.setAttribute("aria-label", label);
+            img.setAttribute("role", "img");
+            img.className = "queercode-emoji";
+            img.onerror = () => img.replaceWith(document.createTextNode(matches[i]));
+            frag.appendChild(img);
           }
         }
 
-        try {
-          // Replace original text node with fragment containing text + emojis
-          parent.replaceChild(frag, node);
-        } catch (e) {
-          console.warn("Queercode DOM replace failed", e);
-        }
+        // Replace the original text node with the fragment
+        parent.replaceChild(frag, node);
       }
     });
   }

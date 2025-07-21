@@ -18,7 +18,6 @@ private emojiContext: {
 
 
 
-
   constructor(app: App, plugin: Plugin, emojiMap: Record<string, string>, availableEmojiFiles: Set<string>) {
     super(app);
     this.plugin = plugin;
@@ -28,9 +27,11 @@ private emojiContext: {
 
 
 
-  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile) {
+  onTrigger(cursor: EditorPosition, editor: Editor) {
   const line = editor.getLine(cursor.line);
-  const match = line.substring(0, cursor.ch).match(/(?:^|\s)(:\w*)$/);
+  const match = line.substring(0, cursor.ch).match(/(?:^|\s|[*_~`"(]|(?<!\[)\[)(:\w*)$/);
+
+
   if (!match) return null;
 
   const triggerStart = cursor.ch - match[1].length;
