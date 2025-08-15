@@ -35,13 +35,18 @@ private emojiContext: {
   if (!match) return null;
 
   const triggerStart = cursor.ch - match[1].length;
-
+  let endCh = cursor.ch;
+  // Scan forward for an existing shortcode (e.g., :bee:)
+  const afterTrigger = line.substring(cursor.ch);
+  const shortcodeMatch = afterTrigger.match(/^\w*:?/);
+  if (shortcodeMatch && shortcodeMatch[0].endsWith(':')) {
+    endCh = cursor.ch + shortcodeMatch[0].length;
+  }
   this.emojiContext = {
     editor,
     start: { line: cursor.line, ch: triggerStart },
-    end: cursor,
+    end: { line: cursor.line, ch: endCh },
   };
-
   return {
     start: this.emojiContext.start,
     end: this.emojiContext.end,

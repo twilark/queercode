@@ -41,13 +41,15 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 
 ```
 queercode/
-├── main.ts           # Core plugin logic
-├── suggest.ts        # Autocomplete
-├── style.css         # Emoji rendering styles
-├── generate-emoji-map.js # Script to auto-generate emoji-map.json
-├── emoji-map.json    # Generated shortcode → filename map
-└── emojis/           # Emoji PNG and SVG images
-
+├── main.ts           # Core plugin logic and entry point
+├── suggest.ts        # Autocomplete suggester implementation
+├── settings.ts       # UI and logic for the plugin's settings tab
+├── generate-emoji-map.js # Node.js script to auto-generate the emoji map
+├── emoji-map.json    # The generated map of shortcodes to image filenames
+├── styles.css        # CSS for styling the rendered emojis
+├── package.json      # Project metadata and build scripts
+├── manifest.json     # Plugin metadata for Obsidian
+└── ... other files (LICENSE, README, etc.)
 ```
 
 ---
@@ -70,27 +72,29 @@ npm run generate-emoji-map
 - Your images **must** be `.png` or `.svg` format
 - Filenames become shortcodes automatically: `bisexual_flag.png` → `:bisexual_flag:` Autocomplete triggers only after typing at least one character after `:`
 - These shortcodes can be safely changed, but user is responsible for ensuring unique entries
-- Emoji rendering is not available within codeblocks (suggestions will show for inline code)
+- Emoji rendering in Live Preview modes is not always predictable
 - Custom entries in `emoji-map.json` should not be overwritten even if the map must be regenerated
-- **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation
+- **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation for more information
 
 ---
 
 ## 📋 Roadmap / TODO
 
-- [ ] Expand plugin settings to allow user control over `emoji-map.json` generation within Obsidian
-- [ ] Allow user settings to expand or restrict context usage (e.g. within codeblocks)
-- [ ] Support combined emoji+label syntax (e.g., `:emoji::label:`)
-- [ ] Drag-and-drop UI to manage emoji packs in plugin settings
-- [ ] Skintone selection for humanoid emojis during map generation
+- [ ] Generate and control `emoji-map.json` from plugin settings GUI in Obsidian
+- [ ] Significantly improve stability of rendering in Live Preview
+- [ ] Refactor for maintainability + testing
+- [ ] Toggle plugin context (e.x.: restrict within codeblocks) for suggester and renderers
+- [ ] Skintone & hand part default/fallback selection for humanoid emojis during map generation
+- [ ] Drag-and-drop UI for managing multiple asset packs
+- [ ] Combined emoji+modifier syntax (e.g., `:emoji::modifier:`) to apply dynamic, inline styling/behaviors
+- [ ] Support `.gif` and `.webp` files
 
 ---
 
 ## Credits
 
-- [MutantStandard](https://mutant.tech/) is the phenomenal work of Caius Nocturne
+- Assets: [MutantStandard](https://mutant.tech/) is the phenomenal work of Caius Nocturne
 - EditorSuggest utilizes [fuzzysort](https://github.com/farzher/fuzzysort)
-- Plugin skeleton based on Obsidian plugin + esbuild boilerplate
 
 ## License
 
