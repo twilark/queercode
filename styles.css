@@ -1,3 +1,5 @@
+/* styles.css - Updated with suggestion UI classes */
+
 .queercode-emoji {
   display: inline-block !important;
   width: 1.3em !important;
@@ -9,6 +11,7 @@
   opacity: 1 !important;
   filter: none !important;
 }
+
 /* Improve header emoji alignment and scale */
 :is(h1) .queercode-emoji {
   height: 1.1em !important;
@@ -17,6 +20,7 @@
   position: relative;
   top: -0.12em;
 }
+
 :is(h2, h3, h4) .queercode-emoji {
   height: 1.1em !important;
   width: auto !important;
@@ -24,10 +28,41 @@
   position: relative;
   top: -0.2em;
 }
+
 :is(h5, h6) .queercode-emoji {
   height: 1em !important;
   width: auto !important;
   vertical-align: middle !important;
   position: relative;
   top: -0.15em;
+}
+
+/* Suggestion UI styling */
+.emoji-suggest-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.emoji-suggest-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+}
+
+.emoji-suggest-shortcode {
+  font-weight: bold !important;
+}
+
+.emoji-suggest-match-info {
+  font-size: 0.9em !important;
+  color: var(--text-muted) !important;
+  display: block !important;
+}
+
+.emoji-suggest-category {
+  font-size: 0.8em !important;
+  color: var(--text-muted) !important;
+  font-style: italic !important;
+  margin-left: auto !important;
 }

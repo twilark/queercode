@@ -15,11 +15,10 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 
 ## ✨ Features
 
-- Define and use custom emoji with easy `:shortcode:` syntax, auto-generated emoji map from your emoji image folder
-- Autocomplete suggestions activate as you type shortcodes
-- Consistent styling across various contexts, including tables, headers, callouts, and footnotes
-- Emojis render with ARIA labels and other attributes
-- Supports `.png` and `.svg` emoji images; set your preferred default in settings
+- **Custom Emoji and Shortcodes:** Define and use custom emoji with easy `:shortcode:` syntax, auto-generated emoji map from your emoji image folder. Specify a custom folder for your emoji assets anywhere in your vault.
+- **Autocomplete Suggestions:** An intelligent suggester activates as you type shortcodes, providing a fuzzy-searched list of options.
+- **Consistent, Accessible Rendering:** Emojis render with ARIA labels and consistent styling across various contexts, including tables, headers, and callouts.
+- **Filetype Support:** Supports `.png` and `.svg` emoji images; set your preferred file type in settings.
 
 ---
 
@@ -42,28 +41,25 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 ```
 queercode/
 ├── main.ts           # Core plugin logic and entry point
-├── suggest.ts        # Autocomplete suggester implementation
-├── settings.ts       # UI and logic for the plugin's settings tab
-├── generate-emoji-map.js # Node.js script to auto-generate the emoji map
+├── EmojiService.ts   # Manages emoji data, validation, and regex generation
+├── MapHandler.ts     # Handles file system operations (loading/generating the map)
+├── EmojiSuggest.ts   # Autocomplete suggester implementation
+├── SettingsTab.ts    # UI and logic for the plugin's settings tab
 ├── emoji-map.json    # The generated map of shortcodes to image filenames
-├── styles.css        # CSS for styling the rendered emojis
-├── package.json      # Project metadata and build scripts
-├── manifest.json     # Plugin metadata for Obsidian
-└── ... other files (LICENSE, README, etc.)
+└── ... other files
 ```
 
 ---
 
-## 🛠 Adding New Emojis
+## 🛠️ Adding New Emojis
 
-1. Drop PNGs into `queercode/emojis/`.
-2. Run:
+The primary way to update your emoji list is now through the Obsidian settings GUI.
 
-```bash
-npm run generate-emoji-map
-```
+1.  Add new `.png` or `.svg` files to your designated emoji folder.
+2.  In Obsidian, go to `Settings` -> `Community Plugins` -> `Queercode`.
+3.  Click the **"Generate Emoji Map"** button. The plugin will scan for new files, update the map, and prune any entries for deleted files.
 
-3. Use shortcodes like `:file_name:` in your notes.
+The old command-line method (`npm run generate-emoji-map`) is still available for developers.
 
 ---
 
@@ -80,7 +76,7 @@ npm run generate-emoji-map
 
 ## 📋 Roadmap / TODO
 
-- [ ] Generate and control `emoji-map.json` from plugin settings GUI in Obsidian
+- [x] Generate and control `emoji-map.json` from plugin settings GUI in Obsidian
 - [ ] Significantly improve stability of rendering in Live Preview
 - [ ] Refactor for maintainability + testing
 - [ ] Toggle plugin context (e.x.: restrict within codeblocks) for suggester and renderers

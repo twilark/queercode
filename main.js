@@ -691,37 +691,77 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 var import_obsidian3 = require("obsidian");
 
-// settings.ts
+// SettingsTab.ts
 var import_obsidian = require("obsidian");
 var DEFAULT_SETTINGS = {
-  filetypePreference: "svg"
+  filetypePreference: "svg",
+  emojiFolderPath: ""
 };
 var QueercodeSettingTab = class extends import_obsidian.PluginSettingTab {
-  constructor(app, plugin) {
+  constructor(app, plugin, settings, saveSettings, generateEmojiMap, refreshSuggester) {
     super(app, plugin);
-    this.plugin = plugin;
+    this.isGenerating = false;
+    this.settings = settings;
+    this.saveSettings = saveSettings;
+    this.generateEmojiMap = generateEmojiMap;
+    this.refreshSuggester = refreshSuggester;
   }
   display() {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Queercode Settings" });
     new import_obsidian.Setting(containerEl).setName("Preferred emoji filetype").setDesc("Choose which file type to use when both SVG and PNG exist.").addDropdown(
-      (dropdown) => dropdown.addOption("svg", "SVG (recommended)").addOption("png", "PNG").addOption("auto", "Auto-detect (prefer SVG, fallback to PNG)").setValue(this.plugin.settings.filetypePreference).onChange(async (value) => {
-        this.plugin.settings.filetypePreference = value;
-        await this.plugin.saveSettings();
+      (dropdown) => dropdown.addOption("svg", "SVG (recommended)").addOption("png", "PNG").addOption("auto", "Auto-detect (prefer SVG)").setValue(this.settings.filetypePreference).onChange(async (value) => {
+        this.settings.filetypePreference = value;
+        await this.saveSettings();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Emoji folder path").setDesc("Vault-relative path to your emoji library folder. Leave blank to use all subfolders in the default 'emoji/' directory.").addText(
+      (text) => text.setPlaceholder("emoji/twemoji/").setValue(this.settings.emojiFolderPath).onChange(async (value) => {
+        this.settings.emojiFolderPath = value.trim();
+        await this.saveSettings();
+      })
+    );
+    containerEl.createEl("h3", { text: "Emoji Map Management" });
+    const mapInfo = containerEl.createEl("p", {
+      text: "Generate or update the emoji map from files in your emoji folder. This will scan for .png and .svg files and create shortcodes automatically."
+    });
+    mapInfo.addClass("setting-item-description");
+    new import_obsidian.Setting(containerEl).setName("Emoji map generation").setDesc("Regenerate the emoji map from the files in your emoji folder.").addButton(
+      (button) => button.setButtonText(this.isGenerating ? "Generating..." : "Generate Emoji Map").setDisabled(this.isGenerating).onClick(async () => {
+        await this.handleGenerateEmojiMap();
       })
     );
   }
+  async handleGenerateEmojiMap() {
+    if (this.isGenerating) return;
+    this.isGenerating = true;
+    const notice = new import_obsidian.Notice("Generating emoji map...", 0);
+    try {
+      this.display();
+      const result = await this.generateEmojiMap();
+      this.refreshSuggester();
+      notice.hide();
+      new import_obsidian.Notice(`Emoji map updated: ${result.added} new entries, ${result.total} total entries.`);
+    } catch (error) {
+      console.error("Error generating emoji map:", error);
+      notice.hide();
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      new import_obsidian.Notice(`Failed to generate emoji map: ${errorMessage}`);
+    } finally {
+      this.isGenerating = false;
+      this.display();
+    }
+  }
 };
 
-// suggest.ts
+// EmojiSuggest.ts
 var import_obsidian2 = require("obsidian");
 var import_fuzzysort = __toESM(require_fuzzysort());
 var EmojiSuggest = class extends import_obsidian2.EditorSuggest {
-  constructor(app, plugin, emojiMap, availableEmojiFiles) {
+  constructor(app, emojiMap, availableEmojiFiles) {
     super(app);
     this.emojiContext = null;
-    this.plugin = plugin;
     this.emojiMap = emojiMap;
     this.availableEmojiFiles = availableEmojiFiles;
   }
@@ -756,7 +796,7 @@ var EmojiSuggest = class extends import_obsidian2.EditorSuggest {
   renderSuggestion(entry, el) {
     el.addClass("emoji-suggest-item");
     const img = document.createElement("img");
-    img.src = this.plugin.app.vault.adapter.getResourcePath(`${this.plugin.manifest.dir}/emoji/${entry.file}`);
+    img.src = this.app.vault.adapter.getResourcePath(entry.file);
     img.className = "queercode-emoji";
     el.appendChild(img);
     const span = document.createElement("span");
@@ -769,6 +809,243 @@ var EmojiSuggest = class extends import_obsidian2.EditorSuggest {
     editor.replaceRange(entry.shortcode, start, end);
     this.emojiContext = null;
   }
+  updateData(emojiMap, availableFiles) {
+    this.emojiMap = emojiMap;
+    this.availableEmojiFiles = availableFiles;
+  }
+};
+
+// MapHandler.ts
+var MapHandler = class {
+  constructor(app, manifestDir, emojiFolderPath, filetypePreference) {
+    this.app = app;
+    this.manifestDir = manifestDir;
+    this.emojiFolderPath = emojiFolderPath;
+    this.filetypePreference = filetypePreference;
+  }
+  // Recursive helper to scan all files in a directory and its subdirectories
+  async getAllFilesRecursive(folderPath) {
+    const allFiles = [];
+    try {
+      const listing = await this.app.vault.adapter.list(folderPath);
+      allFiles.push(...listing.files);
+      for (const subfolder of listing.folders) {
+        const subFiles = await this.getAllFilesRecursive(subfolder);
+        allFiles.push(...subFiles);
+      }
+    } catch (error) {
+    }
+    return allFiles;
+  }
+  async loadEmojiMap() {
+    try {
+      const file = await this.app.vault.adapter.read(`${this.manifestDir}/emoji-map.json`);
+      return JSON.parse(file);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        console.warn("emoji-map.json contains invalid JSON. Please fix or regenerate the file.", e);
+      } else {
+        console.warn("Could not load emoji-map.json (file missing or unreadable).", e);
+      }
+      return {};
+    }
+  }
+  async loadAvailableFiles() {
+    let allFiles = /* @__PURE__ */ new Set();
+    let targetFolder;
+    if (this.emojiFolderPath && this.emojiFolderPath.length > 0) {
+      targetFolder = this.emojiFolderPath.replace(/\/$/, "");
+    } else {
+      targetFolder = `${this.manifestDir}/emoji`;
+    }
+    try {
+      const files = await this.getAllFilesRecursive(targetFolder);
+      files.forEach((f) => {
+        if (f.endsWith(".png") || f.endsWith(".svg")) {
+          allFiles.add(f);
+        }
+      });
+    } catch (error) {
+    }
+    return allFiles;
+  }
+  async generateEmojiMap() {
+    let emojiFolders = [];
+    if (this.emojiFolderPath && this.emojiFolderPath.length > 0) {
+      emojiFolders = [this.emojiFolderPath.replace(/\/$/, "")];
+    } else {
+      emojiFolders = [`${this.manifestDir}/emoji`];
+    }
+    const mapPath = `${this.manifestDir}/emoji-map.json`;
+    let existingMap = {};
+    try {
+      const mapContent = await this.app.vault.adapter.read(mapPath);
+      existingMap = JSON.parse(mapContent);
+    } catch (error) {
+      existingMap = {};
+    }
+    const allFiles = [];
+    for (const folder of emojiFolders) {
+      try {
+        const files = await this.getAllFilesRecursive(folder);
+        files.forEach((f) => {
+          const fname = f.split("/").pop();
+          if (fname && (fname.endsWith(".png") || fname.endsWith(".svg"))) {
+            allFiles.push(f);
+          }
+        });
+      } catch (error) {
+      }
+    }
+    if (allFiles.length === 0) {
+      throw new Error("No .png or .svg files found in the emoji directory.");
+    }
+    const availableFilesSet = new Set(allFiles);
+    for (const shortcode in existingMap) {
+      if (!availableFilesSet.has(existingMap[shortcode])) {
+        delete existingMap[shortcode];
+      }
+    }
+    const filesByBase = /* @__PURE__ */ new Map();
+    for (const file of allFiles) {
+      const fname = file.split("/").pop();
+      const lastDotIndex = fname.lastIndexOf(".");
+      const ext = lastDotIndex !== -1 ? fname.slice(lastDotIndex).toLowerCase() : "";
+      const base = lastDotIndex !== -1 ? fname.slice(0, lastDotIndex) : fname;
+      if (!filesByBase.has(base)) {
+        filesByBase.set(base, {});
+      }
+      if (ext === ".svg") {
+        filesByBase.get(base).svg = file;
+      } else if (ext === ".png") {
+        filesByBase.get(base).png = file;
+      }
+    }
+    let addedCount = 0;
+    const preferredExtension = this.filetypePreference === "png" ? "png" : "svg";
+    const fallbackExtension = preferredExtension === "svg" ? "png" : "svg";
+    for (const [base, versions] of filesByBase.entries()) {
+      const shortcode = `:${base}:`;
+      if (shortcode in existingMap) continue;
+      let chosenFile = versions[preferredExtension] || versions[fallbackExtension];
+      if (!chosenFile) continue;
+      existingMap[shortcode] = chosenFile;
+      addedCount++;
+    }
+    const sortedKeys = Object.keys(existingMap).sort();
+    const entries = sortedKeys.map((key) => `  "${key}": "${existingMap[key]}"`);
+    const jsonContent = `{
+${entries.join(",\n")}
+}
+`;
+    await this.app.vault.adapter.write(mapPath, jsonContent);
+    return { added: addedCount, total: sortedKeys.length };
+  }
+  // Useful regex patterns for future category detection
+  getCategoryPatterns() {
+    return [
+      { regex: /_flag$/, category: "flags" },
+      { regex: /_heart$/, category: "hearts" },
+      { regex: /^cat_/, category: "cats" },
+      { regex: /^[0-9]+_[0-9]+$/, category: "time" },
+      { regex: /(arrow|point)/, category: "arrows" },
+      { regex: /(face|smile|grin|cry)/, category: "faces" },
+      { regex: /(hand|finger|fist|clw)/, category: "hands" },
+      // clw = claw
+      { regex: /(paw|paws)/, category: "paws" }
+    ];
+  }
+};
+
+// EmojiService.ts
+var EmojiService = class {
+  // Constructor now receives specific values instead of the entire plugin
+  constructor(app, manifestDir, emojiFolderPath, filetypePreference) {
+    this.emojiMap = {};
+    this.availableFiles = /* @__PURE__ */ new Set();
+    this.initialized = false;
+    this.app = app;
+    this.mapHandler = new MapHandler(app, manifestDir, emojiFolderPath, filetypePreference);
+  }
+  async load() {
+    try {
+      const [emojiMap, availableFiles] = await Promise.all([
+        this.mapHandler.loadEmojiMap(),
+        this.mapHandler.loadAvailableFiles()
+      ]);
+      const validMap = {};
+      for (const [shortcode, filepath] of Object.entries(emojiMap)) {
+        if (!shortcode.startsWith(":") || !shortcode.endsWith(":")) {
+          console.warn(`Invalid shortcode format: ${shortcode}`);
+          continue;
+        }
+        if (!filepath.endsWith(".png") && !filepath.endsWith(".svg")) {
+          console.warn(`Invalid file extension for ${shortcode}: ${filepath}`);
+          continue;
+        }
+        if (availableFiles.has(filepath)) {
+          validMap[shortcode] = filepath;
+        } else {
+          console.warn(`File not found for ${shortcode}: ${filepath}`);
+        }
+      }
+      this.emojiMap = validMap;
+      this.availableFiles = availableFiles;
+      this.initialized = true;
+      console.log(`EmojiService loaded: ${Object.keys(validMap).length} emojis, ${availableFiles.size} files available`);
+    } catch (error) {
+      console.error("Failed to initialize EmojiService:", error);
+      this.emojiMap = {};
+      this.availableFiles = /* @__PURE__ */ new Set();
+      this.initialized = true;
+    }
+  }
+  async generateMap() {
+    if (!this.initialized) {
+      throw new Error("EmojiService not initialized. Call load() first.");
+    }
+    const result = await this.mapHandler.generateEmojiMap();
+    await this.load();
+    return result;
+  }
+  // Method to refresh suggester data after map regeneration
+  // Note: This method doesn't need the plugin object, just the suggester instance
+  refreshSuggester(suggester) {
+    if (suggester && suggester.updateData) {
+      suggester.updateData(this.emojiMap, this.availableFiles);
+    }
+  }
+  getEmojiMap() {
+    if (!this.initialized) {
+      throw new Error("EmojiService not initialized. Call load() first.");
+    }
+    return { ...this.emojiMap };
+  }
+  getAvailableFiles() {
+    if (!this.initialized) {
+      throw new Error("EmojiService not initialized. Call load() first.");
+    }
+    return new Set(this.availableFiles);
+  }
+  getRenderRegex() {
+    if (!this.initialized) {
+      throw new Error("EmojiService not initialized. Call load() first.");
+    }
+    const keys = Object.keys(this.emojiMap);
+    if (keys.length === 0) {
+      return /(?!.*)/g;
+    }
+    return new RegExp(
+      keys.map((k) => k.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")).join("|"),
+      "g"
+    );
+  }
+  getSuggestRegex() {
+    return /(?:^|\s|[*_~`"(]|(?<!\[)\[)(:\w*)$/;
+  }
+  isInitialized() {
+    return this.initialized;
+  }
 };
 
 // main.ts
@@ -776,28 +1053,43 @@ var QueercodePlugin = class extends import_obsidian3.Plugin {
   async onload() {
     console.log("Queercode plugin loaded");
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-    this.addSettingTab(new QueercodeSettingTab(this.app, this));
-    const emojiMap = await this.loadEmojiMap();
-    if (!emojiMap || Object.keys(emojiMap).length === 0) {
-      new import_obsidian3.Notice("No emoji map found. Please ensure emoji-map.json exists in the plugin directory.");
+    this.addSettingTab(new QueercodeSettingTab(
+      this.app,
+      this,
+      // Pass the plugin instance as required by PluginSettingTab
+      this.settings,
+      () => this.saveSettings(),
+      () => this.emojiService.generateMap(),
+      () => this.emojiService.refreshSuggester(this.emojiSuggest)
+    ));
+    this.emojiService = new EmojiService(
+      this.app,
+      this.manifest.dir || "",
+      // Use the manifest directory from the plugin
+      this.settings.emojiFolderPath || "",
+      // Use the emoji folder path from settings
+      this.settings.filetypePreference || "svg"
+      // Provide default if undefined
+    );
+    await this.emojiService.load();
+    if (!this.emojiService.isInitialized()) {
+      new import_obsidian3.Notice("Failed to initialize emoji service.");
       return;
     }
-    const emojiFolder = `${this.manifest.dir}/emoji`;
-    const files = await this.app.vault.adapter.list(emojiFolder);
-    const availableEmojiFiles = new Set(
-      files.files.map((f) => f.split("/").pop()).filter((f) => f !== void 0)
-    );
-    if (!availableEmojiFiles.size) {
+    const emojiMap = this.emojiService.getEmojiMap();
+    const availableEmojiFiles = this.emojiService.getAvailableFiles();
+    if (Object.keys(emojiMap).length === 0) {
+      new import_obsidian3.Notice("No emoji map found. Please generate the emoji map in settings.");
+    }
+    if (availableEmojiFiles.size === 0) {
       new import_obsidian3.Notice("No emoji files found in the plugin's emoji directory.");
-      return;
     }
-    const emojiSuggest = new EmojiSuggest(this.app, this, emojiMap, availableEmojiFiles);
-    this.registerEditorSuggest(emojiSuggest);
-    const shortcodeRegex = new RegExp(
-      Object.keys(emojiMap).map((k) => k.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")).join("|"),
-      "g"
-    );
+    this.emojiSuggest = new EmojiSuggest(this.app, emojiMap, availableEmojiFiles);
+    this.registerEditorSuggest(this.emojiSuggest);
     this.registerMarkdownPostProcessor(async (el) => {
+      const currentEmojiMap = this.emojiService.getEmojiMap();
+      if (Object.keys(currentEmojiMap).length === 0) return;
+      const shortcodeRegex = this.emojiService.getRenderRegex();
       const walker = document.createTreeWalker(
         el,
         NodeFilter.SHOW_TEXT,
@@ -828,6 +1120,7 @@ var QueercodePlugin = class extends import_obsidian3.Plugin {
       for (const node of targets) {
         const parent = node.parentNode;
         if (!parent) continue;
+        const emojiMap2 = currentEmojiMap;
         const parts = (node.nodeValue || "").split(shortcodeRegex);
         shortcodeRegex.lastIndex = 0;
         const matches = (node.nodeValue || "").match(shortcodeRegex) || [];
@@ -835,14 +1128,14 @@ var QueercodePlugin = class extends import_obsidian3.Plugin {
         for (let i = 0; i < parts.length; i++) {
           if (parts[i]) frag.appendChild(document.createTextNode(parts[i]));
           if (matches[i]) {
-            const url = emojiMap[matches[i]];
+            const url = emojiMap2[matches[i]];
             if (!url || !url.endsWith(".png") && !url.endsWith(".svg")) {
               frag.appendChild(document.createTextNode(matches[i]));
               continue;
             }
             const label = matches[i].replace(/^:/, "").replace(/_+/g, " ").replace(/:$/, "");
             const img = document.createElement("img");
-            img.src = this.app.vault.adapter.getResourcePath(`${this.manifest.dir}/emoji/${url}`);
+            img.src = this.app.vault.adapter.getResourcePath(url);
             img.alt = label;
             img.title = matches[i];
             img.setAttribute("aria-label", label);
@@ -855,20 +1148,6 @@ var QueercodePlugin = class extends import_obsidian3.Plugin {
         parent.replaceChild(frag, node);
       }
     });
-  }
-  // Load emoji mapping JSON file from plugin directory
-  async loadEmojiMap() {
-    try {
-      const file = await this.app.vault.adapter.read(`${this.manifest.dir}/emoji-map.json`);
-      return JSON.parse(file);
-    } catch (e) {
-      if (e instanceof SyntaxError) {
-        console.warn("emoji-map.json contains invalid JSON. Please fix or regenerate the file.", e);
-      } else {
-        console.warn("Could not load emoji-map.json (file missing or unreadable).", e);
-      }
-      return {};
-    }
   }
   // Save plugin settings
   async saveSettings() {
