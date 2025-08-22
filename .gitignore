@@ -1,4 +1,7 @@
 node_modules/
+main.js
+
+
 .prettierignore
 .vscode/
 
