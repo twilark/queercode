@@ -2,7 +2,6 @@ import { App } from "obsidian";
 
 export class MapHandler {
   private app: App;
-  // Instead of storing the entire plugin, we store only the specific values we need
   private manifestDir: string;
   private emojiFolderPath: string;
   private filetypePreference: string;
@@ -14,7 +13,6 @@ export class MapHandler {
     filetypePreference: string
   ) {
     this.app = app;
-    // Store the specific values we need instead of the entire plugin
     this.manifestDir = manifestDir;
     this.emojiFolderPath = emojiFolderPath;
     this.filetypePreference = filetypePreference;

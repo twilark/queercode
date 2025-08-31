@@ -1,7 +1,7 @@
 import { Plugin, Notice } from "obsidian";
 import { QueercodeSettings, DEFAULT_SETTINGS, QueercodeSettingTab } from "./SettingsTab";
 import { EmojiSuggest } from "./EmojiSuggest";
-import { EmojiService } from "./EmojiService";
+import { EmojiService } from "./services/EmojiService";
 
 export default class QueercodePlugin extends Plugin {
   settings!: QueercodeSettings;

@@ -1,6 +1,6 @@
 import { App } from "obsidian";
-import { MapHandler } from "./MapHandler";
-// REMOVED: import QueercodePlugin from "./main"; - this eliminates the circular dependency
+import { MapHandler } from "../MapHandler";
+
 
 export class EmojiService {
   private app: App;
@@ -9,7 +9,7 @@ export class EmojiService {
   private availableFiles: Set<string> = new Set();
   private initialized: boolean = false;
 
-  // Constructor now receives specific values instead of the entire plugin
+
   constructor(
     app: App,
     manifestDir: string,

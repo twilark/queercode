@@ -1,10 +1,19 @@
+## build
 node_modules/
 main.js
 
-
+## workspace files
 .prettierignore
 .vscode/
-
 .obsidian/
 workspace.json
 
+
+## madge / dependency-cruiser outputs
+dependencies.svg
+dependencies.html
+deps.svg
+deps.html
+dependencies.png
+
+queercode.zip
