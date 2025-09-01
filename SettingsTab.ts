@@ -1,6 +1,5 @@
 import { App, PluginSettingTab, Setting, Notice, Plugin } from "obsidian";
 
-
 export interface QueercodeSettings {
   filetypePreference: "svg" | "png" | "auto";
   emojiFolderPath: string;
@@ -15,7 +14,6 @@ export class QueercodeSettingTab extends PluginSettingTab {
   private settings: QueercodeSettings;
   private saveSettings: () => Promise<void>;
   private generateEmojiMap: () => Promise<{added: number, total: number}>;
-  private refreshSuggester: () => void;
   private isGenerating = false;
 
   constructor(
@@ -23,14 +21,12 @@ export class QueercodeSettingTab extends PluginSettingTab {
     plugin: Plugin,
     settings: QueercodeSettings,
     saveSettings: () => Promise<void>,
-    generateEmojiMap: () => Promise<{added: number, total: number}>,
-    refreshSuggester: () => void
+    generateEmojiMap: () => Promise<{added: number, total: number}>
   ) {
     super(app, plugin); // Pass the plugin to super() as required
     this.settings = settings;
     this.saveSettings = saveSettings;
     this.generateEmojiMap = generateEmojiMap;
-    this.refreshSuggester = refreshSuggester;
   }
 
   display(): void {
@@ -101,9 +97,6 @@ export class QueercodeSettingTab extends PluginSettingTab {
 
       // Use the callback function to generate the map
       const result = await this.generateEmojiMap();
-
-      // Refresh the suggester with new data
-      this.refreshSuggester();
 
       notice.hide();
       new Notice(`Emoji map updated: ${result.added} new entries, ${result.total} total entries.`);

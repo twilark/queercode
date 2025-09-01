@@ -1,6 +1,7 @@
 import { App } from "obsidian";
 import { MapHandler } from "../MapHandler";
 
+type UpdateCallback = () => void;
 
 export class EmojiService {
   private app: App;
@@ -8,6 +9,7 @@ export class EmojiService {
   private emojiMap: Record<string, string> = {};
   private availableFiles: Set<string> = new Set();
   private initialized: boolean = false;
+  private onUpdateCallbacks: Set<UpdateCallback> = new Set();
 
 
   constructor(
@@ -79,33 +81,27 @@ export class EmojiService {
     return result;
   }
 
-  // Method to refresh suggester data after map regeneration
-  // Note: This method doesn't need the plugin object, just the suggester instance
-  refreshSuggester(suggester: any) {
-    if (suggester && suggester.updateData) {
-      suggester.updateData(this.emojiMap, this.availableFiles);
-    }
-  }
 
+// Get a copy of the current emoji map
   getEmojiMap(): Record<string, string> {
     if (!this.initialized) {
       throw new Error("EmojiService not initialized. Call load() first.");
     }
     return { ...this.emojiMap }; // Return a copy to prevent external mutation
   }
-
+// Get a copy of the available emoji files
   getAvailableFiles(): Set<string> {
     if (!this.initialized) {
       throw new Error("EmojiService not initialized. Call load() first.");
     }
     return new Set(this.availableFiles); // Return a copy
   }
-
+// Regex to find shortcodes in text for rendering
   getRenderRegex(): RegExp {
     if (!this.initialized) {
       throw new Error("EmojiService not initialized. Call load() first.");
     }
-
+// Build regex from current emoji map keys
     const keys = Object.keys(this.emojiMap);
     if (keys.length === 0) {
       // Return a regex that matches nothing if no emojis loaded
@@ -118,14 +114,27 @@ export class EmojiService {
       "g"
     );
   }
-
+// Regex to trigger the suggester
   getSuggestRegex(): RegExp {
-    // This regex triggers the suggester when user types :word
-    // It handles markdown formatting and prevents triggering inside links
     return /(?:^|\s|[*_~`"(]|(?<!\[)\[)(:\w*)$/;
   }
-
+// Check if service is initialized
   isInitialized(): boolean {
     return this.initialized;
   }
+// Event system for map updates
+    onMapUpdate(callback: UpdateCallback): void {
+    this.onUpdateCallbacks.add(callback);
+  }
+// Unsubscribe from map updates
+  offMapUpdate(callback: UpdateCallback): void {
+    this.onUpdateCallbacks.delete(callback);
+  }
+// Notify all listeners of a map update
+  private notifyListeners(): void {
+    for (const callback of this.onUpdateCallbacks) {
+      callback();
+    }
 }
+}
+
