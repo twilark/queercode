@@ -98,6 +98,9 @@ export class QueercodeSettingTab extends PluginSettingTab {
       // Use the callback function to generate the map
       const result = await this.generateEmojiMap();
 
+      // Note: We removed this.refreshSuggester() call because the event system
+      // in EmojiService will automatically notify all subscribers (including the suggester)
+
       notice.hide();
       new Notice(`Emoji map updated: ${result.added} new entries, ${result.total} total entries.`);
 
