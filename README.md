@@ -7,9 +7,10 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 > [!NOTE]
 > ### **Who is this for?**
 >
-> - Obsidian users who value colorful emoji in their visual hierarchy and notetaking,
-> - Who are constrained by their device's ability to display specific Unicode characters cleanly within Obsidian (i.e. stubborn Win10 users 💜)
-> - And/or who are unsatisfied with Twemoji-as-default, or the shortcodes imposed by e.g. Iconic
+> - Obsidian users who:
+> - Value colorful emoji in their visual hierarchy and notetaking,
+> - Who are constrained by their device's ability to display specific Unicode characters cleanly within Obsidian (i.e. stubborn Win10 users 💜),
+> - And/or who are unsatisfied with other Emoji-based plugins
 
 ---
 
@@ -77,9 +78,9 @@ The old command-line method (`npm run generate-emoji-map`) is still available fo
 ## 📋 Roadmap / TODO
 
 - [x] Generate and control `emoji-map.json` from plugin settings GUI in Obsidian
-- [ ] Significantly improve stability of rendering in Live Preview
-- [ ] Refactor for maintainability + testing
-- [ ] Toggle plugin context (e.x.: restrict within codeblocks) for suggester and renderers
+- [x] Significantly improve stability of rendering in Live Preview
+- [x] Refactor for maintainability + testing
+- [ ] Toggle plugin context (e.g.: restrict within codeblocks) for suggester and renderers
 - [ ] Skintone & hand part default/fallback selection for humanoid emojis during map generation
 - [ ] Drag-and-drop UI for managing multiple asset packs
 - [ ] Combined emoji+modifier syntax (e.g., `:emoji::modifier:`) to apply dynamic, inline styling/behaviors

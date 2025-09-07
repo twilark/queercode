@@ -1,14 +1,21 @@
-## 0.5.8-alpha (Latest)
+## 0.6.3-alpha (Latest)
 
-- **🚀 Major Architectural Refactor:** The plugin has been completely reorganized for stability and future development.
-  - Core logic is now split into modular services, e.g. `EmojiService` for data management/validation and `MapHandler` for all file system operations.
-  - This change eliminates circular dependencies and creates a single source of truth for all emoji data.
-- **Improved Data Handling:** The `EmojiService` now validates the `emoji-map.json` on load, ensuring that only emojis with existing image files are used by the renderer and suggester.
-- **New: GUI-Based Map Generation!** You can now generate and update your `emoji-map.json` directly from the plugin's settings tab—no command line needed.
-- **New: Custom Emoji Folder!** Added a setting to specify a custom, vault-relative path for your emoji assets folder.
+- **🚀 CM6 Integration:** Plugin now renders emoji in live preview! CM6 integration across nearly all contexts.
+  - Now uses CM6's `decorations.map(update.changes)`; full rebuild only occurs when user types exiting `:`, drastically reducing potential for lag.
+  - `TreeWalker` hybrid approach eliminated, DOM stability restored. Document no longer vanishes on mode switch.
+  - `EmojiWidget.ts` now has a more intelligent `ignoreEvent` method that allows seamless keyboard navigation and pass-through, while blocking mouse-clicks that caused unreliable cursor behavior.
+  - CSS rule (`cursor: text;`) to complement widget stability in text flow.
+- **Known Issues:** Emojis render inside of fenced and inline codeblocks.
+- **Todo:**
+  - Implement robust context handling through `syntaxTree` (including helper function in `LivePreview.ts`) that will check node type before scanning for emojis. This is far more reliable than regex, and permits user control toggling.
+  - Code cleanup: Remove unnecessary files; centralize `TreeWalker` logic in `ShortcodeDecorator.ts` (and import elsewhere).
 
 ---
 
+0.6.2-alpha: reverted keymap handlers to attempt to address cursor handling issues
+0.6.1-alpha: temporarily fixed context rendering... which broke DOM sync
+0.6.0-alpha: CM6 decoration implemented in `LivePreview.ts`, with cursor issues and improper context rendering
+0.5.8-alpha: separation of concerns + modularity, generate emoji map from settings GUI
 0.5.5-alpha: - generate `emoji-map` from GUI is now much improved; - map generation is recursive and accounts for subdirectories; - filepath handling is now (should be) consistent across modules
 0.5.3-alpha: un-broke images in suggester (inconsistent filepaths in `EmojiSuggest.ts` and `main.ts` constructor)
 0.5.2-alpha: - circular dependencies squashed. - map generation now appropriately falls back to plugin asset folder if custom path is not provided.

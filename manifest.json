@@ -1,7 +1,7 @@
 {
   "id": "queercode",
   "name": "Queercode",
-  "version": "0.0.3",
+  "version": "0.6.1",
   "author": "twilark",
   "description": "Replaces :shortcodes: with emojis/images.",
   "main": "main.js",

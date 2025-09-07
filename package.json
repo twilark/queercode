@@ -1,8 +1,8 @@
 {
   "name": "queercode",
-  "version": "0.0.1",
+  "version": "0.6.1",
   "scripts": {
-    "build": "esbuild main.ts --bundle --outfile=main.js --format=cjs --target=es2020 --platform=node --external:obsidian",
+    "build": "esbuild main.ts --bundle --outfile=main.js --format=cjs --target=es2020 --platform=node --external:obsidian --external:@codemirror/state --external:@codemirror/view --external:@codemirror/language",
     "generate-emoji-map": "node generate-emoji-map.js"
   },
   "devDependencies": {

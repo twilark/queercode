@@ -1,4 +1,4 @@
-/* styles.css - Updated with suggestion UI classes */
+/* styles.css - Back to original working styles with minimal CM6 additions */
 
 .queercode-emoji {
   display: inline-block !important;
@@ -65,4 +65,9 @@
   color: var(--text-muted) !important;
   font-style: italic !important;
   margin-left: auto !important;
+}
+
+/* MINIMAL CM6 Live Preview fix - only prevent cursor jumping */
+.cm-editor .queercode-emoji {
+  cursor: text;
 }

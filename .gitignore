@@ -4,16 +4,21 @@ main.js
 
 ## workspace files
 .prettierignore
+.claudeignore
 .vscode/
 .obsidian/
+.claudeignore
+.claude/
 workspace.json
 
 
 ## madge / dependency-cruiser outputs
-dependencies.svg
-dependencies.html
-deps.svg
-deps.html
-dependencies.png
+dependencies.*
+deps.*
 
+## development
 queercode.zip
+.dev/
+claude.md
+test-*.md
+*-test.md
