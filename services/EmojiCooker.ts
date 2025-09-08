@@ -1,11 +1,11 @@
 import { App } from "obsidian";
-import { MapHandler } from "../MapHandler";
+import { EmojiMap } from "../EmojiMapper";
 
 type UpdateCallback = () => void;
 
-export class EmojiService {
+export class EmojiCooker {
   private app: App;
-  private mapHandler: MapHandler;
+  private mapHandler: EmojiMap;
   private emojiMap: Record<string, string> = {};
   private availableFiles: Set<string> = new Set();
   private initialized: boolean = false;
@@ -19,8 +19,8 @@ export class EmojiService {
     filetypePreference: string
   ) {
     this.app = app;
-    // Create MapHandler with the specific values it needs
-    this.mapHandler = new MapHandler(app, manifestDir, emojiFolderPath, filetypePreference);
+    // Create EmojiMap with the specific values it needs
+    this.mapHandler = new EmojiMap(app, manifestDir, emojiFolderPath, filetypePreference);
   }
 
   async load(): Promise<void> {
@@ -28,7 +28,7 @@ export class EmojiService {
       // Load emoji map and available files
       const [emojiMap, availableFiles] = await Promise.all([
         this.mapHandler.loadEmojiMap(),
-        this.mapHandler.loadAvailableFiles()
+        this.mapHandler.findFiles()
       ]);
 
       // Validate the map - only keep entries with existing files
@@ -58,9 +58,9 @@ export class EmojiService {
       this.availableFiles = availableFiles;
       this.initialized = true;
 
-      console.log(`EmojiService loaded: ${Object.keys(validMap).length} emojis, ${availableFiles.size} files available`);
+      console.log(`EmojiCooker loaded: ${Object.keys(validMap).length} emojis, ${availableFiles.size} files available`);
     } catch (error) {
-      console.error("Failed to initialize EmojiService:", error);
+      console.error("Failed to initialize EmojiCooker:", error);
       // Initialize with empty data rather than failing
       this.emojiMap = {};
       this.availableFiles = new Set();
@@ -68,12 +68,12 @@ export class EmojiService {
     }
   }
 
-  async generateMap(): Promise<{added: number, total: number}> {
+  async buildMap(): Promise<{added: number, total: number}> {
     if (!this.initialized) {
-      throw new Error("EmojiService not initialized. Call load() first.");
+      throw new Error("EmojiCooker not initialized. Call load() first.");
     }
 
-    const result = await this.mapHandler.generateEmojiMap();
+    const result = await this.mapHandler.buildMap();
 
     // Reload data after generation
     await this.load();
@@ -85,21 +85,21 @@ export class EmojiService {
 // Get a copy of the current emoji map
   getEmojiMap(): Record<string, string> {
     if (!this.initialized) {
-      throw new Error("EmojiService not initialized. Call load() first.");
+      throw new Error("EmojiCooker not initialized. Call load() first.");
     }
     return { ...this.emojiMap }; // Return a copy to prevent external mutation
   }
 // Get a copy of the available emoji files
   getAvailableFiles(): Set<string> {
     if (!this.initialized) {
-      throw new Error("EmojiService not initialized. Call load() first.");
+      throw new Error("EmojiCooker not initialized. Call load() first.");
     }
     return new Set(this.availableFiles); // Return a copy
   }
 // Regex to find shortcodes in text for rendering
   getRenderRegex(): RegExp {
     if (!this.initialized) {
-      throw new Error("EmojiService not initialized. Call load() first.");
+      throw new Error("EmojiCooker not initialized. Call load() first.");
     }
 // Build regex from current emoji map keys
     const keys = Object.keys(this.emojiMap);

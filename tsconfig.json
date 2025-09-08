@@ -7,5 +7,5 @@
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["*.ts", "services/EmojiService.ts"]
+  "include": ["*.ts", "services/EmojiCooker.ts", "ui/QueercodeSettings.ts"]
 }

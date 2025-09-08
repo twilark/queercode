@@ -67,7 +67,47 @@
   margin-left: auto !important;
 }
 
-/* MINIMAL CM6 Live Preview fix - only prevent cursor jumping */
-.cm-editor .queercode-emoji {
-  cursor: text;
+/* Queercode CM6 Decoration Styling */
+.queercode-shortcode-mark {
+    display: inline-block;
+    position: relative;
+    width: 1.3em;
+    height: 1.3em;
+    vertical-align: -0.25em;
+    color: transparent;
+    user-select: text;
+    /* Add these two lines to fix the vertical hover issue */
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.queercode-shortcode-mark::before {
+    content: '';
+    display: inline-block;
+    /* Create a 'firewall' against the parent's font-size: 0. */
+    /* This resets the font size so that the 'em' units below work correctly. */
+    font-size: initial;
+    width: 1.3em;
+    height: 1.3em;
+    /* Standard image styling */
+    background-image: var(--emoji-bg-image, none);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* --- The cursor/selection rules remain the same --- */
+.cm-selection .queercode-shortcode-mark,
+.cm-s-obsidian .cm-selection .queercode-shortcode-mark,
+.cm-focused .cm-cursor+.queercode-shortcode-mark,
+.queercode-shortcode-mark:has(+ .cm-cursor) {
+    font-size: inherit !important;
+    /* Reveal text */
+}
+
+.cm-selection .queercode-shortcode-mark::before,
+.cm-s-obsidian .cm-selection .queercode-shortcode-mark::before,
+.cm-focused .cm-cursor+.queercode-shortcode-mark::before,
+.queercode-shortcode-mark:has(+ .cm-cursor)::before {
+    content: none !important;
 }

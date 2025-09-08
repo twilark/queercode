@@ -1,6 +1,6 @@
 import { App } from "obsidian";
 
-export class MapHandler {
+export class EmojiMap {
   private app: App;
   private manifestDir: string;
   private emojiFolderPath: string;
@@ -19,7 +19,7 @@ export class MapHandler {
   }
 
   // Recursive helper to scan all files in a directory and its subdirectories
-  private async getAllFilesRecursive(folderPath: string): Promise<string[]> {
+  private async findAllFiles(folderPath: string): Promise<string[]> {
     const allFiles: string[] = [];
 
     try {
@@ -30,7 +30,7 @@ export class MapHandler {
 
       // Recursively scan all subdirectories
       for (const subfolder of listing.folders) {
-        const subFiles = await this.getAllFilesRecursive(subfolder);
+        const subFiles = await this.findAllFiles(subfolder);
         allFiles.push(...subFiles);
       }
     } catch (error) {
@@ -55,7 +55,7 @@ export class MapHandler {
     }
   }
 
-  async loadAvailableFiles(): Promise<Set<string>> {
+  async findFiles(): Promise<Set<string>> {
     let allFiles = new Set<string>();
     let targetFolder: string;
 
@@ -68,7 +68,7 @@ export class MapHandler {
     }
 
     try {
-      const files = await this.getAllFilesRecursive(targetFolder);
+      const files = await this.findAllFiles(targetFolder);
       files.forEach(f => {
         if (f.endsWith('.png') || f.endsWith('.svg')) {
           allFiles.add(f);
@@ -80,7 +80,7 @@ export class MapHandler {
     return allFiles;
   }
 
-  async generateEmojiMap(): Promise<{added: number, total: number}> {
+  async buildMap(): Promise<{added: number, total: number}> {
     let emojiFolders: string[] = [];
 
     // Use our stored emojiFolderPath instead of this.plugin.settings.emojiFolderPath
@@ -105,7 +105,7 @@ export class MapHandler {
     const allFiles: string[] = [];
     for (const folder of emojiFolders) {
       try {
-        const files = await this.getAllFilesRecursive(folder);
+        const files = await this.findAllFiles(folder);
         files.forEach(f => {
           const fname = f.split("/").pop();
           if (fname && (fname.endsWith('.png') || fname.endsWith('.svg'))) {

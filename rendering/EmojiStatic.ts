@@ -1,20 +1,20 @@
 import { App, MarkdownPostProcessor } from "obsidian";
-import { EmojiService } from "../services/EmojiService";
+import { EmojiCooker } from "../services/EmojiCooker";
 
-export class ReadingModeRenderer {
+class EmojiStaticRenderer {
   constructor(
-    private emojiService: EmojiService,
+    private emojiService: EmojiCooker,
     private app: App
   ) {}
 
   public getProcessor(): MarkdownPostProcessor {
     return (el) => {
-      this.processElement(el);
+      this.convertElement(el);
     };
   }
 
-  private processElement(el: HTMLElement) {
-    // Get data from EmojiService instead of parameters
+  private convertElement(el: HTMLElement) {
+    // Get data from EmojiCooker instead of parameters
     const emojiMap = this.emojiService.getEmojiMap();
     const shortcodeRegex = this.emojiService.getRenderRegex();
 
@@ -92,4 +92,9 @@ export class ReadingModeRenderer {
       parent.replaceChild(frag, node);
     }
   }
+}
+
+export function EmojiStatic(emojiService: EmojiCooker, app: App): MarkdownPostProcessor {
+  const renderer = new EmojiStaticRenderer(emojiService, app);
+  return renderer.getProcessor();
 }

@@ -1,14 +1,14 @@
 import { App, Notice, EditorPosition, TFile, Editor, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo } from "obsidian";
 import fuzzysort from "fuzzysort";
 
-export interface EmojiEntry {
+export interface EmojiOption {
   shortcode: string;
   file: string;
 }
 
-export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
+export class EmojiPicker extends EditorSuggest<EmojiOption> {
   private emojiMap: Record<string, string>;
-  private availableEmojiFiles: Set<string>;
+  private emojiFiles: Set<string>;
 
   private emojiContext: {
     editor: Editor;
@@ -16,10 +16,10 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
     end: EditorPosition;
   } | null = null;
 
-  constructor(app: App, emojiMap: Record<string, string>, availableEmojiFiles: Set<string>) {
+  constructor(app: App, emojiMap: Record<string, string>, emojiFiles: Set<string>) {
     super(app);
     this.emojiMap = emojiMap;
-    this.availableEmojiFiles = availableEmojiFiles;
+    this.emojiFiles = emojiFiles;
   }
 
   onTrigger(cursor: EditorPosition, editor: Editor) {
@@ -43,12 +43,12 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
     };
   }
 
-  getSuggestions(context: EditorSuggestContext): EmojiEntry[] {
+  getSuggestions(context: EditorSuggestContext): EmojiOption[] {
     const query = context.query.toLowerCase();
     const emojiShortcodes = Object.keys(this.emojiMap);
 
     const filteredShortcodes = emojiShortcodes.filter(
-      shortcode => this.availableEmojiFiles.has(this.emojiMap[shortcode])
+      shortcode => this.emojiFiles.has(this.emojiMap[shortcode])
     );
 
     const results = fuzzysort.go(query, filteredShortcodes, { limit: 20 });
@@ -59,7 +59,7 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
     }));
   }
 
-  renderSuggestion(entry: EmojiEntry, el: HTMLElement): void {
+  renderSuggestion(entry: EmojiOption, el: HTMLElement): void {
     el.addClass("emoji-suggest-item");
     const img = document.createElement("img");
 
@@ -73,7 +73,7 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
     el.appendChild(span);
   }
 
-  selectSuggestion(entry: EmojiEntry) {
+  selectSuggestion(entry: EmojiOption) {
     if (!this.emojiContext) return;
 
     const { editor, start, end } = this.emojiContext;
@@ -81,8 +81,8 @@ export class EmojiSuggest extends EditorSuggest<EmojiEntry> {
     this.emojiContext = null;
   }
 
-  updateData(emojiMap: Record<string, string>, availableFiles: Set<string>) {
+  refresh(emojiMap: Record<string, string>, emojiFiles: Set<string>) {
     this.emojiMap = emojiMap;
-    this.availableEmojiFiles = availableFiles;
+    this.emojiFiles = emojiFiles;
   }
 }

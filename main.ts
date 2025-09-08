@@ -1,14 +1,14 @@
 import { Plugin, Notice } from "obsidian";
-import { QueercodeSettings, DEFAULT_SETTINGS, QueercodeSettingTab } from "./SettingsTab";
-import { EmojiSuggest } from "./EmojiSuggest";
-import { EmojiService } from "./services/EmojiService";
-import { ReadingModeRenderer } from "./rendering/ReadingMode";
-import { LivePreviewRenderer } from "./rendering/LivePreview";
+import { QueercodeSettingsData, DEFAULT_SETTINGS, QueercodeSettings } from "./ui/QueercodeSettings";
+import { EmojiPicker } from "./EmojiPicker";
+import { EmojiCooker } from "./services/EmojiCooker";
+import { EmojiStatic } from "./rendering/EmojiStatic";
+import { EmojiLive } from "./rendering/EmojiLive";
 
 export default class QueercodePlugin extends Plugin {
-  settings!: QueercodeSettings;
-  emojiService!: EmojiService;
-  emojiSuggest!: EmojiSuggest;
+  settings!: QueercodeSettingsData;
+  emojiService!: EmojiCooker;
+  emojiCompleter!: EmojiPicker;
 
   async onload() {
     console.log("Queercode plugin loaded");
@@ -16,8 +16,8 @@ export default class QueercodePlugin extends Plugin {
     // Load stored settings or use defaults
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
-    // Initialize EmojiService with specific values
-    this.emojiService = new EmojiService(
+    // Initialize EmojiCooker with specific values
+    this.emojiService = new EmojiCooker(
       this.app,
       this.manifest.dir || "",                  // Use the manifest directory from the plugin
       this.settings.emojiFolderPath || "",      // Use the emoji folder path from settings
@@ -32,17 +32,11 @@ export default class QueercodePlugin extends Plugin {
     }
 
     const emojiMap = this.emojiService.getEmojiMap();
-    const availableEmojiFiles = this.emojiService.getAvailableFiles();
+    const emojiFiles = this.emojiService.getAvailableFiles();
 
-    // Create the renderers
-    const readingModeRenderer = new ReadingModeRenderer(this.emojiService, this.app);
-    const livePreviewRenderer = new LivePreviewRenderer(this.emojiService, this.app);
-
-    // Register the reading mode renderer
-    this.registerMarkdownPostProcessor(readingModeRenderer.getProcessor());
-
-    // Register the live preview renderer (currently does nothing)
-    this.registerEditorExtension(livePreviewRenderer.getExtension());
+    // Register the renderers
+    this.registerMarkdownPostProcessor(EmojiStatic(this.emojiService, this.app));
+    this.registerEditorExtension(EmojiLive(this.emojiService, this.app));
 
     // Initialize and register the suggester
     if (Object.keys(emojiMap).length === 0) {
@@ -50,33 +44,32 @@ export default class QueercodePlugin extends Plugin {
       // Don't return - allow the plugin to load so user can generate the map
     }
 
-    if (availableEmojiFiles.size === 0) {
+    if (emojiFiles.size === 0) {
       new Notice("No emoji files found in the plugin's emoji directory.");
       // Don't return - allow the plugin to load
     }
 
-    this.emojiSuggest = new EmojiSuggest(this.app, emojiMap, availableEmojiFiles);
-    this.registerEditorSuggest(this.emojiSuggest);
+    this.emojiCompleter = new EmojiPicker(this.app, emojiMap, emojiFiles);
+    this.registerEditorSuggest(this.emojiCompleter);
 
     // Set up emoji suggester to refresh when map updates
     this.emojiService.onMapUpdate(() => {
-      if (this.emojiSuggest && this.emojiSuggest.updateData) {
+      if (this.emojiCompleter && this.emojiCompleter.refresh) {
         const emojiMap = this.emojiService.getEmojiMap();
-        const availableFiles = this.emojiService.getAvailableFiles();
-        this.emojiSuggest.updateData(emojiMap, availableFiles);
+        const emojiFiles = this.emojiService.getAvailableFiles();
+        this.emojiCompleter.refresh(emojiMap, emojiFiles);
       }
 
-      // The live preview renderer will need refresh in Phase 3
-      livePreviewRenderer.refresh();
+      // Live preview refreshes automatically via map update handlers
     });
 
     // Add plugin settings tab to UI (updated to remove refreshSuggester callback)
-    this.addSettingTab(new QueercodeSettingTab(
+    this.addSettingTab(new QueercodeSettings(
       this.app,
       this,  // Pass the plugin instance as required by PluginSettingTab
       this.settings,
       () => this.saveSettings(),
-      () => this.emojiService.generateMap()  // Removed refreshSuggester callback
+      () => this.emojiService.buildMap()  // Emoji map builder callback
     ));
   }
 

@@ -1,32 +1,32 @@
 import { App, PluginSettingTab, Setting, Notice, Plugin } from "obsidian";
 
-export interface QueercodeSettings {
+export interface QueercodeSettingsData {
   filetypePreference: "svg" | "png" | "auto";
   emojiFolderPath: string;
 }
 
-export const DEFAULT_SETTINGS: QueercodeSettings = {
+export const DEFAULT_SETTINGS: QueercodeSettingsData = {
   filetypePreference: "svg",
   emojiFolderPath: ""
 };
 
-export class QueercodeSettingTab extends PluginSettingTab {
-  private settings: QueercodeSettings;
+export class QueercodeSettings extends PluginSettingTab {
+  private settings: QueercodeSettingsData;
   private saveSettings: () => Promise<void>;
-  private generateEmojiMap: () => Promise<{added: number, total: number}>;
+  private buildMap: () => Promise<{added: number, total: number}>;
   private isGenerating = false;
 
   constructor(
     app: App,
     plugin: Plugin,
-    settings: QueercodeSettings,
+    settings: QueercodeSettingsData,
     saveSettings: () => Promise<void>,
-    generateEmojiMap: () => Promise<{added: number, total: number}>
+    buildMap: () => Promise<{added: number, total: number}>
   ) {
     super(app, plugin); // Pass the plugin to super() as required
     this.settings = settings;
     this.saveSettings = saveSettings;
-    this.generateEmojiMap = generateEmojiMap;
+    this.buildMap = buildMap;
   }
 
   display(): void {
@@ -96,10 +96,10 @@ export class QueercodeSettingTab extends PluginSettingTab {
       this.display();
 
       // Use the callback function to generate the map
-      const result = await this.generateEmojiMap();
+      const result = await this.buildMap();
 
       // Note: We removed this.refreshSuggester() call because the event system
-      // in EmojiService will automatically notify all subscribers (including the suggester)
+      // in EmojiCooker will automatically notify all subscribers (including the suggester)
 
       notice.hide();
       new Notice(`Emoji map updated: ${result.added} new entries, ${result.total} total entries.`);
