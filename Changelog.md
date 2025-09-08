@@ -1,10 +1,11 @@
-## 0.6.3-alpha (Latest)
+## 0.6.4-alpha (Latest)
 
 - **🚀 CM6 Integration:** Plugin now renders emoji in live preview! CM6 integration across nearly all contexts.
   - Now uses CM6's `decorations.map(update.changes)`; full rebuild only occurs when user types exiting `:`, drastically reducing potential for lag.
   - `TreeWalker` hybrid approach eliminated, DOM stability restored. Document no longer vanishes on mode switch.
   - `EmojiWidget.ts` now has a more intelligent `ignoreEvent` method that allows seamless keyboard navigation and pass-through, while blocking mouse-clicks that caused unreliable cursor behavior.
   - CSS rule (`cursor: text;`) to complement widget stability in text flow.
+  - Code is more human, less enterprise; minor organization adjustments.
 - **Known Issues:** Emojis render inside of fenced and inline codeblocks.
 - **Todo:**
   - Implement robust context handling through `syntaxTree` (including helper function in `LivePreview.ts`) that will check node type before scanning for emojis. This is far more reliable than regex, and permits user control toggling.
