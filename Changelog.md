@@ -4,12 +4,13 @@
   - Now uses CM6's `decorations.map(update.changes)`; full rebuild only occurs when user types exiting `:`, drastically reducing potential for lag.
   - `TreeWalker` hybrid approach eliminated, DOM stability restored. Document no longer vanishes on mode switch.
   - `EmojiWidget.ts` now has a more intelligent `ignoreEvent` method that allows seamless keyboard navigation and pass-through, while blocking mouse-clicks that caused unreliable cursor behavior.
-  - CSS rule (`cursor: text;`) to complement widget stability in text flow.
+  - CSS rules for smoother emoji widget behavior & performance.
   - Code is more human, less enterprise; minor organization adjustments.
 - **Known Issues:** Emojis render inside of fenced and inline codeblocks.
 - **Todo:**
+  - Fix cursor navigation in LP mode, implement emoji-destruction on backspace/cursor navigation.
   - Implement robust context handling through `syntaxTree` (including helper function in `LivePreview.ts`) that will check node type before scanning for emojis. This is far more reliable than regex, and permits user control toggling.
-  - Code cleanup: Remove unnecessary files; centralize `TreeWalker` logic in `ShortcodeDecorator.ts` (and import elsewhere).
+  - Code cleanup: Remove unnecessary files; centralize `TreeWalker` logic.
 
 ---
 

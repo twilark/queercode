@@ -72,14 +72,13 @@ The old command-line method (`npm run generate-emoji-map`) is still available fo
 - Emoji rendering in Live Preview modes is not always predictable
 - Custom entries in `emoji-map.json` should not be overwritten even if the map must be regenerated
 - **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation for more information
+- **Known Issues:** Cursor navigation around emoji elements in Live Preview mode is buggy. Navigate using `ctrl`, `home` etc. where possible.
 
 ---
 
 ## 📋 Roadmap / TODO
 
-- [x] Generate and control `emoji-map.json` from plugin settings GUI in Obsidian
-- [x] Significantly improve stability of rendering in Live Preview
-- [x] Refactor for maintainability + testing
+- [ ] Improve Live Preview cursor navigation, implement deletion/backspace handling
 - [ ] Toggle plugin context (e.g.: restrict within codeblocks) for suggester and renderers
 - [ ] Skintone & hand part default/fallback selection for humanoid emojis during map generation
 - [ ] Drag-and-drop UI for managing multiple asset packs
