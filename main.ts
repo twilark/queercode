@@ -35,8 +35,8 @@ export default class QueercodePlugin extends Plugin {
     const emojiFiles = this.emojiService.getAvailableFiles();
 
     // Register the renderers
-    this.registerMarkdownPostProcessor(EmojiStatic(this.emojiService, this.app));
-    this.registerEditorExtension(EmojiLive(this.emojiService, this.app));
+    this.registerMarkdownPostProcessor(EmojiStatic(this.emojiService, this.app, this.settings));
+    this.registerEditorExtension(EmojiLive(this.emojiService, this.app, this.settings));
 
     // Initialize and register the suggester
     if (Object.keys(emojiMap).length === 0) {

@@ -76,21 +76,28 @@ The old command-line method (`npm run generate-emoji-map`) is still available fo
 
 ---
 
-## 📋 Roadmap / TODO
+## 📋 Roadmap
+
+### To-Dos for v1
 
 - [ ] Improve Live Preview cursor navigation, implement deletion/backspace handling
 - [ ] Toggle plugin context (e.g.: restrict within codeblocks) for suggester and renderers
 - [ ] Skintone & hand part default/fallback selection for humanoid emojis during map generation
-- [ ] Drag-and-drop UI for managing multiple asset packs
+
+
+### Beyond v1
+
 - [ ] Combined emoji+modifier syntax (e.g., `:emoji::modifier:`) to apply dynamic, inline styling/behaviors
 - [ ] Support `.gif` and `.webp` files
+- [ ] Drag-and-drop UI for managing multiple asset packs
+
 
 ---
 
 ## Credits
 
 - Assets: [MutantStandard](https://mutant.tech/) is the phenomenal work of Caius Nocturne
-- EditorSuggest utilizes [fuzzysort](https://github.com/farzher/fuzzysort)
+- Suggester utilizes [fuzzysort](https://github.com/farzher/fuzzysort)
 
 ## License
 

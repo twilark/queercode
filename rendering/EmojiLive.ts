@@ -3,7 +3,11 @@ import { App } from "obsidian";
 import { Extension, SelectionRange } from "@codemirror/state";
 import { ViewPlugin, ViewUpdate, EditorView, Decoration, DecorationSet, KeyBinding } from "@codemirror/view";
 import { keymap } from "@codemirror/view";
+// Access syntaxTree through global require at runtime since it's externalized
+// @ts-ignore - External dependency available at runtime
+const { syntaxTree } = require('@codemirror/language');
 import { EmojiCooker } from "../services/EmojiCooker";
+import { QueercodeSettingsData } from "../ui/QueercodeSettings";
 // import { EmojiWidget } from "./EmojiWidget"; // Not used in mark decoration approach
 import { ShortcodeScanner } from "./ShortcodeScanner";
 
@@ -21,9 +25,15 @@ class EmojiMarker {
   constructor(
     private view: EditorView,
     private emojiService: EmojiCooker,
-    private app: App
+    private app: App,
+    private settings: QueercodeSettingsData
   ) {
     this.scanner = new ShortcodeScanner(this.emojiService, this.app);
+
+    // Log context filtering status for verification
+    console.log("Queercode: Context filtering enabled -",
+      "Codeblocks:", this.settings.renderInCodeblocks,
+      "Inline code:", this.settings.renderInInlineCode);
 
     // Build initial decorations if service is ready
     if (this.emojiService.isInitialized()) {
@@ -173,6 +183,63 @@ class EmojiMarker {
   }
 
   /**
+   * Check if a position should be filtered based on syntax tree context
+   */
+  private shouldFilterPosition(position: number): boolean {
+    try {
+      const tree = syntaxTree(this.view.state);
+      const cursor = tree.cursorAt(position);
+
+      // Debug: Occasionally log syntax tree structure (minimal)
+      if (Math.random() < 0.005) {
+        console.log("Queercode: Checking position", position, "in node:", cursor.type.name);
+      }
+
+      // Walk up the syntax tree to check all parent contexts
+      do {
+        const nodeType = cursor.type.name; // Keep original case for exact matching
+
+        // Check for fenced code blocks - HyperMD style
+        if (nodeType === 'HyperMD-codeblock' || nodeType.includes('CodeBlock') ||
+            nodeType.includes('FencedCode') || nodeType.includes('codeblock')) {
+          return !this.settings.renderInCodeblocks;
+        }
+
+        // Check for inline code - CM6 style
+        if (nodeType === 'cm-inline-code' || nodeType.includes('InlineCode') ||
+            nodeType.includes('inline-code')) {
+          return !this.settings.renderInInlineCode;
+        }
+
+        // Check for URL/link contexts - HyperMD and CM6 variations
+        if (nodeType.includes('Link') || nodeType.includes('URL') ||
+            nodeType.includes('hmd-link') || nodeType.includes('autolink') ||
+            nodeType.startsWith('link_') || nodeType.endsWith('_link')) {
+          return !this.settings.renderInUrls;
+        }
+
+        // Check for frontmatter contexts - HyperMD style
+        if (nodeType.includes('frontmatter') || nodeType.includes('yaml') ||
+            nodeType === 'HyperMD-frontmatter' || nodeType.includes('Frontmatter')) {
+          return !this.settings.renderInFrontmatter;
+        }
+
+        // Check for comment contexts - various formats
+        if (nodeType.includes('comment') || nodeType.includes('Comment') ||
+            nodeType === 'HyperMD-comment') {
+          return !this.settings.renderInComments;
+        }
+
+      } while (cursor.parent());
+
+      return false; // Allow by default if no forbidden context found
+    } catch (error) {
+      console.warn("Queercode: Error checking syntax tree context:", error);
+      return false; // Allow by default on error
+    }
+  }
+
+  /**
    * Extract changed ranges from update with buffer zones
    */
   private getChangedRanges(update: ViewUpdate): Array<{from: number, to: number}> {
@@ -261,6 +328,11 @@ class EmojiMarker {
         if (match.imagePath && match.label) {
           // Validate positions
           if (match.from >= 0 && match.to <= doc.length && match.from < match.to) {
+            // Check syntax tree context to see if this position should be filtered
+            if (this.shouldFilterPosition(match.from)) {
+              continue; // Skip this match - it's in a filtered context
+            }
+
             try {
               const markDecoration = Decoration.mark({
                 inclusive: false,
@@ -340,8 +412,12 @@ class EmojiMarker {
 
               // Validate positions
               if (from >= 0 && to > from && to <= doc.length) {
-                try {
+                // Check syntax tree context to see if this position should be filtered
+                if (this.shouldFilterPosition(from)) {
+                  continue; // Skip this match - it's in a filtered context
+                }
 
+                try {
                   // Use mark decoration to overlay emoji while preserving original text
                   const markDecoration = Decoration.mark({
                     inclusive: false,
@@ -469,7 +545,8 @@ class EmojiMarker {
 class EmojiLiveRenderer {
   constructor(
     private emojiService: EmojiCooker,
-    private app: App
+    private app: App,
+    private settings: QueercodeSettingsData
   ) {}
 
   /**
@@ -478,6 +555,7 @@ class EmojiLiveRenderer {
   public getExtension(): Extension {
     const emojiService = this.emojiService;
     const app = this.app;
+    const settings = this.settings;
 
     // Create keymap for smart cursor navigation
     const emojiKeymap: KeyBinding[] = [
@@ -509,7 +587,7 @@ class EmojiLiveRenderer {
 
       constructor(view: EditorView) {
         try {
-          this.decorator = new EmojiMarker(view, emojiService, app);
+          this.decorator = new EmojiMarker(view, emojiService, app, settings);
           // Expose navigation method
           (this.decorator as any).handleCursorNavigation = this.decorator.handleCursorNavigation?.bind(this.decorator);
         } catch (error) {
@@ -560,7 +638,7 @@ class EmojiLiveRenderer {
   }
 }
 
-export function EmojiLive(emojiService: EmojiCooker, app: App): Extension {
-  const renderer = new EmojiLiveRenderer(emojiService, app);
+export function EmojiLive(emojiService: EmojiCooker, app: App, settings: QueercodeSettingsData): Extension {
+  const renderer = new EmojiLiveRenderer(emojiService, app, settings);
   return renderer.getExtension();
 }

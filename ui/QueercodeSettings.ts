@@ -3,11 +3,23 @@ import { App, PluginSettingTab, Setting, Notice, Plugin } from "obsidian";
 export interface QueercodeSettingsData {
   filetypePreference: "svg" | "png" | "auto";
   emojiFolderPath: string;
+  // Context filtering settings - control where emojis render
+  renderInCodeblocks: boolean;
+  renderInInlineCode: boolean;
+  renderInUrls: boolean;
+  renderInFrontmatter: boolean;
+  renderInComments: boolean;
 }
 
 export const DEFAULT_SETTINGS: QueercodeSettingsData = {
   filetypePreference: "svg",
-  emojiFolderPath: ""
+  emojiFolderPath: "",
+  // Default to not rendering in code contexts for better UX
+  renderInCodeblocks: false,
+  renderInInlineCode: false,
+  renderInUrls: false,
+  renderInFrontmatter: false,
+  renderInComments: true
 };
 
 export class QueercodeSettings extends PluginSettingTab {
@@ -60,6 +72,74 @@ export class QueercodeSettings extends PluginSettingTab {
           .setValue(this.settings.emojiFolderPath)
           .onChange(async (value) => {
             this.settings.emojiFolderPath = value.trim();
+            await this.saveSettings();
+          })
+      );
+
+    // Context filtering section
+    containerEl.createEl("h3", { text: "Context Filtering" });
+
+    const contextInfo = containerEl.createEl("p", {
+      text: "Control where emoji shortcodes are rendered. Unchecked contexts will show the original :shortcode: text instead of emoji images."
+    });
+    contextInfo.addClass("setting-item-description");
+
+    new Setting(containerEl)
+      .setName("Render in code blocks")
+      .setDesc("Show emojis inside fenced code blocks (```)")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.settings.renderInCodeblocks)
+          .onChange(async (value) => {
+            this.settings.renderInCodeblocks = value;
+            await this.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Render in inline code")
+      .setDesc("Show emojis inside inline code (`code`)")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.settings.renderInInlineCode)
+          .onChange(async (value) => {
+            this.settings.renderInInlineCode = value;
+            await this.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Render in URLs")
+      .setDesc("Show emojis inside markdown links and URLs")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.settings.renderInUrls)
+          .onChange(async (value) => {
+            this.settings.renderInUrls = value;
+            await this.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Render in frontmatter")
+      .setDesc("Show emojis inside YAML frontmatter")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.settings.renderInFrontmatter)
+          .onChange(async (value) => {
+            this.settings.renderInFrontmatter = value;
+            await this.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Render in comments")
+      .setDesc("Show emojis inside HTML/markdown comments")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.settings.renderInComments)
+          .onChange(async (value) => {
+            this.settings.renderInComments = value;
             await this.saveSettings();
           })
       );

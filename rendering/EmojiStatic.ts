@@ -1,16 +1,62 @@
 import { App, MarkdownPostProcessor } from "obsidian";
 import { EmojiCooker } from "../services/EmojiCooker";
+import { QueercodeSettingsData } from "../ui/QueercodeSettings";
 
 class EmojiStaticRenderer {
   constructor(
     private emojiService: EmojiCooker,
-    private app: App
+    private app: App,
+    private settings: QueercodeSettingsData
   ) {}
 
   public getProcessor(): MarkdownPostProcessor {
     return (el) => {
       this.convertElement(el);
     };
+  }
+
+  /**
+   * Check if a text node should be filtered based on its DOM context and user settings
+   */
+  private shouldFilterNode(node: Node): boolean {
+    if (!node.parentElement) return true;
+
+    let current: HTMLElement | null = node.parentElement;
+    while (current !== null) {
+      const tagName = current.tagName;
+      const className = current.className || "";
+
+      // Check for code contexts
+      if (tagName === "CODE" && !this.settings.renderInInlineCode) {
+        return true;
+      }
+      if (tagName === "PRE" && !this.settings.renderInCodeblocks) {
+        return true;
+      }
+
+      // Check for link/URL contexts
+      if (tagName === "A" && !this.settings.renderInUrls) {
+        return true;
+      }
+
+      // Check for frontmatter (typically has specific classes or data attributes)
+      if (className.includes("frontmatter") || className.includes("yaml") ||
+          current.hasAttribute("data-frontmatter")) {
+        if (!this.settings.renderInFrontmatter) {
+          return true;
+        }
+      }
+
+      // Check for comment contexts (HTML comments are not visible in DOM tree,
+      // but markdown comments might be rendered as spans with specific classes)
+      if (className.includes("comment") && !this.settings.renderInComments) {
+        return true;
+      }
+
+      current = current.parentElement;
+    }
+
+    return false; // Allow by default
   }
 
   private convertElement(el: HTMLElement) {
@@ -26,17 +72,20 @@ class EmojiStaticRenderer {
       el,
       NodeFilter.SHOW_TEXT,
       {
-        acceptNode(node) {
+        acceptNode: (node) => {
           if (!node.parentElement) return NodeFilter.FILTER_REJECT;
-          const forbidden = ["CODE", "PRE", "A", "STYLE"];
+
+          // Always reject STYLE tags
           let current: HTMLElement | null = node.parentElement;
           while (current !== null) {
-            if (forbidden.includes(current.tagName)) {
+            if (current.tagName === "STYLE") {
               return NodeFilter.FILTER_REJECT;
             }
             current = current.parentElement;
           }
-          return NodeFilter.FILTER_ACCEPT;
+
+          // Use settings-based filtering for other contexts
+          return this.shouldFilterNode(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
         }
       }
     );
@@ -94,7 +143,7 @@ class EmojiStaticRenderer {
   }
 }
 
-export function EmojiStatic(emojiService: EmojiCooker, app: App): MarkdownPostProcessor {
-  const renderer = new EmojiStaticRenderer(emojiService, app);
+export function EmojiStatic(emojiService: EmojiCooker, app: App, settings: QueercodeSettingsData): MarkdownPostProcessor {
+  const renderer = new EmojiStaticRenderer(emojiService, app, settings);
   return renderer.getProcessor();
 }
