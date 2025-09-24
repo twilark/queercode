@@ -1,24 +1,23 @@
-## 0.6.4-alpha (Latest)
+## 0.6.5-alpha (Latest)
 
-- **🚀 CM6 Integration:** Plugin now renders emoji in live preview! CM6 integration across nearly all contexts.
-  - Widget rebuild only occurs when user types exiting `:`, drastically reducing potential for lag and DOM instability.
-  - `EmojiWidget.ts` now has a more intelligent `ignoreEvent` method that allows seamless keyboard navigation and pass-through, while blocking mouse-clicks that caused unreliable cursor behavior.
-  - CSS rules for smoother emoji widget behavior & performance.
-  - Code is more human, less enterprise; minor organization adjustments.
-- **Known Issues:** Emojis render inside of fenced and inline codeblocks. Edited or pasted shortcodes do not always render appropriately.
-- **Todo:**
-  - Fix cursor navigation in LP mode, implement emoji-destruction on backspace/cursor navigation.
-  - Update methods to allow emoji to render when copy/pasted or edited inline, not only on `:`.
-  - Implement robust context handling through `syntaxTree` (including helper function in `LivePreview.ts`) that will check node type before scanning for emojis. This is far more reliable than regex, and permits user control toggling.
-  - Code cleanup: Remove unnecessary files; centralize `TreeWalker` logic.
-  
+- **⚡ Widget Re-implementation:** Complete transition from mark decorations to CM6 widgets for superior stability.
+  - Replaced `Decoration.mark` approach with `Decoration.replace` + `EmojiWidget` for native DOM rendering
+  - Removed complex `MutationObserver` system and CSS background-image workarounds (~200 lines simplified)
+  - Eliminated custom keymap handlers - widgets now use CM6's built-in navigation behavior
+  - Perfect copy/paste: preserves underlying `:shortcode:` text when copying between applications
+- **☀ No more "disappearing DOM" issues**
+  - Removed safety rebuild timers - widgets provide inherent stability
+  - Streamlined update cycle follows proper CM6 patterns
+- **Updated README:** Now uses correct directory structure, updated roadmap & known issues
 
 ---
 
+0.6.4-alpha: comprehensive CSS styling in attempt to resolve navigation / context issues
 0.6.3-alpha: third attempt at backspace / cursor navigation since mark implementation
 0.6.2-alpha: reverted keymap handlers to attempt to address cursor handling issues
 0.6.1-alpha: temporarily fixed context rendering... which broke DOM sync
 0.6.0-alpha: CM6 decoration implemented in `LivePreview.ts`, with cursor issues and improper context rendering
+0.5.9-alpha: minor refactor + renaming of components - cleaner and more natural
 0.5.8-alpha: separation of concerns + modularity, generate emoji map from settings GUI
 0.5.5-alpha: - generate `emoji-map` from GUI is now much improved; - map generation is recursive and accounts for subdirectories; - filepath handling is now (should be) consistent across modules
 0.5.3-alpha: un-broke images in suggester (inconsistent filepaths in `EmojiSuggest.ts` and `main.ts` constructor)

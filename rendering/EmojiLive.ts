@@ -1,14 +1,16 @@
 // SIMPLIFIED Live Preview emoji rendering - minimal CM6 approach
 import { App } from "obsidian";
-import { Extension, SelectionRange } from "@codemirror/state";
-import { ViewPlugin, ViewUpdate, EditorView, Decoration, DecorationSet, KeyBinding } from "@codemirror/view";
-import { keymap } from "@codemirror/view";
+import { Extension } from "@codemirror/state";
+import { ViewPlugin, ViewUpdate, EditorView, Decoration, DecorationSet } from "@codemirror/view";
+// Access RangeSet for atomic ranges
+// @ts-ignore - External dependency available at runtime
+const { RangeSet } = require('@codemirror/state');
 // Access syntaxTree through global require at runtime since it's externalized
 // @ts-ignore - External dependency available at runtime
 const { syntaxTree } = require('@codemirror/language');
 import { EmojiCooker } from "../services/EmojiCooker";
 import { QueercodeSettingsData } from "../ui/QueercodeSettings";
-// import { EmojiWidget } from "./EmojiWidget"; // Not used in mark decoration approach
+import { EmojiWidget } from "./EmojiWidget";
 import { ShortcodeScanner } from "./ShortcodeScanner";
 
 /**
@@ -19,8 +21,6 @@ class EmojiMarker {
   private decorations: DecorationSet = Decoration.none;
   private mapUpdateHandler: (() => void) | null = null;
   private destroyed = false;
-  private lastFullRebuild = 0; // Track last full rebuild time
-  private mutationObserver: MutationObserver | null = null;
 
   constructor(
     private view: EditorView,
@@ -59,8 +59,6 @@ class EmojiMarker {
 
     this.emojiService.onMapUpdate(this.mapUpdateHandler);
 
-    // Set up MutationObserver to detect new mark decorations
-    this.setupMutationObserver();
   }
 
   /**
@@ -70,10 +68,10 @@ class EmojiMarker {
     if (this.destroyed || !this.emojiService.isInitialized()) return;
 
     if (update.docChanged) {
-      // Always map existing decorations through document changes first
+      // STEP 1: Map existing decorations through document changes first
       this.decorations = this.decorations.map(update.changes);
 
-      // Get changed ranges and check if they contain potential shortcodes
+      // STEP 2: Re-scan changed ranges for new decorations
       const changedRanges = this.getChangedRanges(update);
       const needsRangeUpdate = changedRanges.some(range =>
         this.rangeContainsPotentialShortcodes(range, update.state.doc)
@@ -81,106 +79,17 @@ class EmojiMarker {
 
       if (needsRangeUpdate) {
         try {
-          // Update decorations only for changed ranges (efficient)
           this.updateDecorationsForChangedRanges(changedRanges, update.state.doc);
         } catch (error) {
           console.warn("Error in range update, falling back to full scan:", error);
-          // Fallback to full scan if targeted update fails
           this.decorations = this.scanFullDocumentForShortcodes();
         }
       }
-
-      // Safety check: full rebuild every 10 seconds to catch edge cases
-      const now = Date.now();
-      if (now - this.lastFullRebuild > 10000) {
-        this.decorations = this.scanFullDocumentForShortcodes();
-        this.lastFullRebuild = now;
-      }
     }
   }
 
-  /**
-   * Set up MutationObserver to automatically apply background images
-   * when new mark decorations are added to the DOM
-   */
-  private setupMutationObserver(): void {
-    if (this.mutationObserver) return; // Already set up
 
-    this.mutationObserver = new MutationObserver((mutations) => {
-      let foundNewMarks = false;
 
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
-          // Check for new elements with our mark class
-          for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const element = node as Element;
-
-              // Check if the element itself is a mark or contains marks
-              if (element.classList?.contains('queercode-shortcode-mark')) {
-                foundNewMarks = true;
-                this.applyBackgroundToElement(element as HTMLElement);
-              }
-
-              // Check child elements for marks
-              const childMarks = element.querySelectorAll?.('.queercode-shortcode-mark');
-              if (childMarks && childMarks.length > 0) {
-                foundNewMarks = true;
-                childMarks.forEach(mark => {
-                  this.applyBackgroundToElement(mark as HTMLElement);
-                });
-              }
-            }
-          }
-        } else if (mutation.type === 'attributes' &&
-                   (mutation.target as Element).classList?.contains('queercode-shortcode-mark')) {
-          // Reapply background if attributes changed
-          foundNewMarks = true;
-          this.applyBackgroundToElement(mutation.target as HTMLElement);
-        }
-      }
-
-      // Fallback: if we detected changes but didn't catch specific elements, scan all
-      if (foundNewMarks) {
-        setTimeout(() => this.updateAllEmojiBackgrounds(), 10);
-      }
-    });
-
-    // Observe the editor DOM for changes
-    this.mutationObserver.observe(this.view.dom, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['data-emoji-src', 'class']
-    });
-  }
-
-  /**
-   * Apply background image to a specific mark element
-   */
-  private applyBackgroundToElement(element: HTMLElement): void {
-    const emojiSrc = element.getAttribute('data-emoji-src');
-
-    if (emojiSrc && !element.style.getPropertyValue('--emoji-bg-set')) {
-      element.style.setProperty('--emoji-bg-image', `url("${emojiSrc}")`);
-      element.style.setProperty('--emoji-bg-set', 'true');
-    }
-  }
-
-  /**
-   * Update all emoji backgrounds (comprehensive fallback)
-   */
-  private updateAllEmojiBackgrounds(): void {
-    try {
-      const emojiMarks = this.view.dom.querySelectorAll('.queercode-shortcode-mark');
-
-      for (const mark of emojiMarks) {
-        this.applyBackgroundToElement(mark as HTMLElement);
-      }
-    } catch (error) {
-      console.warn("Error updating all emoji backgrounds:", error);
-    }
-  }
 
   /**
    * Check if a position should be filtered based on syntax tree context
@@ -334,19 +243,13 @@ class EmojiMarker {
             }
 
             try {
-              const markDecoration = Decoration.mark({
-                inclusive: false,
-                class: "queercode-shortcode-mark",
-                attributes: {
-                  "data-shortcode": match.shortcode,
-                  "data-emoji-src": match.imagePath,
-                  "data-emoji-label": match.label
-                }
+              const widgetDecoration = Decoration.replace({
+                widget: new EmojiWidget(match.shortcode, match.imagePath, match.label)
               });
               newDecorations.push({
                 from: match.from,
                 to: match.to,
-                decoration: markDecoration
+                decoration: widgetDecoration
               });
             } catch (error) {
               console.warn("Error creating range decoration:", error);
@@ -370,8 +273,6 @@ class EmojiMarker {
     } else {
       this.decorations = filteredDecorations;
     }
-    // Trigger background update (MutationObserver will handle most cases)
-    setTimeout(() => this.updateAllEmojiBackgrounds(), 50);
   }
 
   /**
@@ -418,18 +319,12 @@ class EmojiMarker {
                 }
 
                 try {
-                  // Use mark decoration to overlay emoji while preserving original text
-                  const markDecoration = Decoration.mark({
-                    inclusive: false,
-                    class: "queercode-shortcode-mark",
-                    attributes: {
-                      "data-shortcode": match.shortcode,
-                      "data-emoji-src": match.imagePath,
-                      "data-emoji-label": match.label
-                    }
+                  // Use widget decoration to replace shortcode with emoji image
+                  const widgetDecoration = Decoration.replace({
+                    widget: new EmojiWidget(match.shortcode, match.imagePath, match.label)
                   });
 
-                  decorations.push({ from, to, decoration: markDecoration });
+                  decorations.push({ from, to, decoration: widgetDecoration });
                 } catch (error) {
                   console.warn("Error creating emoji decoration:", error);
                 }
@@ -460,8 +355,6 @@ class EmojiMarker {
 
       const decorationSet = Decoration.set(cleanDecorations.map(d => d.decoration.range(d.from, d.to)));
 
-      // Trigger background update after decorations are applied
-      setTimeout(() => this.updateAllEmojiBackgrounds(), 50);
 
       return decorationSet;
 
@@ -479,47 +372,30 @@ class EmojiMarker {
   }
 
   /**
-   * Handle smart cursor navigation through emoji shortcodes
+   * Get atomic ranges for all emoji widgets to enable clean backspace/delete behavior
    */
-  public handleCursorNavigation(view: EditorView, direction: 'left' | 'right'): boolean {
-    const selection = view.state.selection.main;
-    const pos = selection.head;
-    // Find if cursor is within or adjacent to a shortcode decoration
-    let targetShortcode: {from: number, to: number} | null = null;
-    this.decorations.between(
-      Math.max(0, pos - 50),
-      Math.min(view.state.doc.length, pos + 50),
-      (from: number, to: number, value: Decoration) => {
-        // Check if cursor is within this decoration range
-        if (pos >= from && pos <= to) {
-          targetShortcode = {from, to};
-          return false; // Stop iteration
-        }
-        // Check if cursor is adjacent and should jump over
-        if (direction === 'right' && pos === from - 1) {
-          targetShortcode = {from, to};
-          return false;
-        }
-        if (direction === 'left' && pos === to + 1) {
-          targetShortcode = {from, to};
-          return false;
-        }
-        // Continue iteration
-        return;
-      }
-    );
-    if (targetShortcode !== null) {
-      const { from, to } = targetShortcode;
-      // Jump cursor to beginning or end of shortcode
-      const newPos = direction === 'right' ? to : from;
-      view.dispatch({
-        selection: { anchor: newPos, head: newPos },
-        scrollIntoView: true
-      });
-      return true; // Prevent default cursor movement
+  getAtomicRanges(): any {
+    const ranges: Array<{ from: number, to: number }> = [];
+
+    this.decorations.between(0, this.view.state.doc.length, (from: number, to: number) => {
+      ranges.push({ from, to });
+    });
+
+    if (ranges.length === 0) {
+      return RangeSet.empty;
     }
-    return false; // Allow default cursor movement
+
+    // Sort ranges and create RangeSet
+    ranges.sort((a, b) => a.from - b.from);
+    const rangeValues = ranges.map(range => ({ from: range.from, to: range.to }));
+
+    return RangeSet.of(rangeValues.map(r => ({
+      from: r.from,
+      to: r.to,
+      value: null
+    })));
   }
+
 
   /**
    * Clean up
@@ -532,10 +408,6 @@ class EmojiMarker {
       this.mapUpdateHandler = null;
     }
 
-    if (this.mutationObserver) {
-      this.mutationObserver.disconnect();
-      this.mutationObserver = null;
-    }
   }
 }
 
@@ -550,37 +422,17 @@ class EmojiLiveRenderer {
   ) {}
 
   /**
-   * Create the CM6 extension - minimal, proven approach with smart cursor navigation
+   * Create the CM6 extension with atomic ranges for optimal editing behavior
+   * Atomic ranges ensure emoji widgets act as single units for:
+   * - Clean backspace/delete (removes entire emoji)
+   * - Proper cursor navigation (skips over widgets)
+   * - Perfect copy/paste (preserves underlying shortcode text)
    */
   public getExtension(): Extension {
     const emojiService = this.emojiService;
     const app = this.app;
     const settings = this.settings;
 
-    // Create keymap for smart cursor navigation
-    const emojiKeymap: KeyBinding[] = [
-      {
-        key: "ArrowLeft",
-        run: (view) => {
-          // Try to handle smart navigation, fall back to default if not applicable
-          const plugin = view.plugin(emojiViewPlugin);
-          if (plugin?.decorator?.handleCursorNavigation) {
-            return plugin.decorator.handleCursorNavigation(view, 'left');
-          }
-          return false;
-        }
-      },
-      {
-        key: "ArrowRight",
-        run: (view) => {
-          const plugin = view.plugin(emojiViewPlugin);
-          if (plugin?.decorator?.handleCursorNavigation) {
-            return plugin.decorator.handleCursorNavigation(view, 'right');
-          }
-          return false;
-        }
-      }
-    ];
 
     const emojiViewPlugin = ViewPlugin.fromClass(class {
       decorator: EmojiMarker;
@@ -588,13 +440,12 @@ class EmojiLiveRenderer {
       constructor(view: EditorView) {
         try {
           this.decorator = new EmojiMarker(view, emojiService, app, settings);
-          // Expose navigation method
-          (this.decorator as any).handleCursorNavigation = this.decorator.handleCursorNavigation?.bind(this.decorator);
         } catch (error) {
           console.error("Error creating EmojiMarker:", error);
           // Create safe fallback
           this.decorator = {
             getDecorations: () => Decoration.none,
+            getAtomicRanges: () => RangeSet.empty,
             update: () => {},
             destroy: () => {}
           } as any;
@@ -627,7 +478,21 @@ class EmojiLiveRenderer {
       }
     });
 
-    return [emojiViewPlugin, keymap.of(emojiKeymap)];
+    // Create atomic ranges facet for clean backspace/delete behavior
+    const atomicRanges = EditorView.atomicRanges.of((view) => {
+      try {
+        const plugin = view.plugin(emojiViewPlugin);
+        if (plugin?.decorator?.getAtomicRanges) {
+          return plugin.decorator.getAtomicRanges();
+        }
+        return RangeSet.empty;
+      } catch (error) {
+        console.error("Error getting atomic ranges:", error);
+        return RangeSet.empty;
+      }
+    });
+
+    return [emojiViewPlugin, atomicRanges];
   }
 
   /**

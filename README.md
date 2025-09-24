@@ -41,12 +41,15 @@ This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` dire
 
 ```
 queercode/
-├── main.ts           # Core plugin logic and entry point
-├── EmojiService.ts   # Manages emoji data, validation, and regex generation
-├── MapHandler.ts     # Handles file system operations (loading/generating the map)
-├── EmojiSuggest.ts   # Autocomplete suggester implementation
-├── SettingsTab.ts    # UI and logic for the plugin's settings tab
-├── emoji-map.json    # The generated map of shortcodes to image filenames
+├── main.ts                    # Core plugin logic and entry point
+├── services/EmojiCooker.ts    # Central emoji service (renamed from EmojiService)
+├── rendering/EmojiStatic.ts   # TreeWalker renderer for Reading Mode
+├── rendering/EmojiLive.ts     # CM6 widget renderer for Live Preview
+├── rendering/EmojiWidget.ts   # CM6 widget implementation
+├── ui/QueercodeSettings.ts    # Settings UI and configuration
+├── EmojiSuggest.ts           # Autocomplete suggester implementation
+├── MapHandler.ts             # File system operations for emoji maps
+├── emoji-map.json            # Generated shortcode-to-filename mapping
 └── ... other files
 ```
 
@@ -69,10 +72,12 @@ The old command-line method (`npm run generate-emoji-map`) is still available fo
 - Your images **must** be `.png` or `.svg` format
 - Filenames become shortcodes automatically: `bisexual_flag.png` → `:bisexual_flag:` Autocomplete triggers only after typing at least one character after `:`
 - These shortcodes can be safely changed, but user is responsible for ensuring unique entries
-- Emoji rendering in Live Preview modes is not always predictable
 - Custom entries in `emoji-map.json` should not be overwritten even if the map must be regenerated
 - **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation for more information
-- **Known Issues:** Cursor navigation around emoji elements in Live Preview mode is buggy. Navigate using `ctrl`, `home` etc. where possible.
+- **Known Issues:**
+  - Context filtering: Emojis may render inside code contexts when disabled in settings
+  - Dynamic updates: Copied/pasted shortcodes may not always render immediately
+  - Cursor navigation: Widget range is sometimes >1, backspace/navigation does not expose the shortcode
 
 ---
 
@@ -80,8 +85,9 @@ The old command-line method (`npm run generate-emoji-map`) is still available fo
 
 ### To-Dos for v1
 
-- [ ] Improve Live Preview cursor navigation, implement deletion/backspace handling
-- [ ] Toggle plugin context (e.g.: restrict within codeblocks) for suggester and renderers
+- [ ] Complete context filtering implementation using `syntaxTree` analysis
+- [ ] Fix cursor navigation in Live Preview mode, implement better backspace/deletion handling
+- [ ] Enable dynamic emoji rendering for copied/pasted shortcodes
 - [ ] Skintone & hand part default/fallback selection for humanoid emojis during map generation
 
 
