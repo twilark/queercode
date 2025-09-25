@@ -1,4 +1,4 @@
-// SIMPLIFIED Live Preview emoji rendering - minimal CM6 approach
+// Live Preview emoji rendering with conditional decoration visibility
 import { App } from "obsidian";
 import { Extension } from "@codemirror/state";
 import { ViewPlugin, ViewUpdate, EditorView, Decoration, DecorationSet } from "@codemirror/view";
@@ -14,13 +14,26 @@ import { EmojiWidget } from "./EmojiWidget";
 import { ShortcodeScanner } from "./ShortcodeScanner";
 
 /**
- * MINIMAL CM6 ViewPlugin decorator - proven working approach
+ * Proximity-based emoji renderer - shows emoji unless cursor is nearby
  */
 class EmojiMarker {
   private scanner: ShortcodeScanner;
   private decorations: DecorationSet = Decoration.none;
   private mapUpdateHandler: (() => void) | null = null;
   private destroyed = false;
+
+  // PERFORMANCE OPTIMIZATION: Cache emoji locations to avoid rescanning document
+  private cachedEmojiRanges: Array<{
+    from: number,
+    to: number,
+    shortcode: string,
+    imagePath: string,
+    label: string
+  }> = [];
+  private lastProximityState = new Map<string, boolean>(); // Track show/hide state per emoji
+
+  // Proximity buffer - cursor within 1 character hides emoji
+  private static readonly PROXIMITY_BUFFER = 1;
 
   constructor(
     private view: EditorView,
@@ -38,7 +51,8 @@ class EmojiMarker {
     // Build initial decorations if service is ready
     if (this.emojiService.isInitialized()) {
       try {
-        this.decorations = this.scanFullDocumentForShortcodes();
+        this.rescanDocument();
+        this.decorations = this.buildDecorationsFromCache();
       } catch (error) {
         console.error("Error building initial decorations:", error);
         this.decorations = Decoration.none;
@@ -49,7 +63,8 @@ class EmojiMarker {
     this.mapUpdateHandler = () => {
       if (!this.destroyed) {
         try {
-          this.decorations = this.scanFullDocumentForShortcodes();
+          this.rescanDocument();
+          this.decorations = this.buildDecorationsFromCache();
         } catch (error) {
           console.error("Error rebuilding decorations:", error);
           this.decorations = Decoration.none;
@@ -58,38 +73,193 @@ class EmojiMarker {
     };
 
     this.emojiService.onMapUpdate(this.mapUpdateHandler);
-
   }
 
   /**
-   * Handle document changes with targeted updates
+   * OPTIMIZED: Scan document only when content changes - cache results
    */
-  update(update: ViewUpdate): void {
-    if (this.destroyed || !this.emojiService.isInitialized()) return;
+  private rescanDocument(): void {
+    this.cachedEmojiRanges = [];
+    const doc = this.view.state.doc;
 
-    if (update.docChanged) {
-      // STEP 1: Map existing decorations through document changes first
-      this.decorations = this.decorations.map(update.changes);
+    // Process each line
+    for (let lineNumber = 1; lineNumber <= doc.lines; lineNumber++) {
+      try {
+        const line = doc.line(lineNumber);
+        const lineText = line.text;
+        const lineFrom = line.from;
 
-      // STEP 2: Re-scan changed ranges for new decorations
-      const changedRanges = this.getChangedRanges(update);
-      const needsRangeUpdate = changedRanges.some(range =>
-        this.rangeContainsPotentialShortcodes(range, update.state.doc)
-      );
-
-      if (needsRangeUpdate) {
-        try {
-          this.updateDecorationsForChangedRanges(changedRanges, update.state.doc);
-        } catch (error) {
-          console.warn("Error in range update, falling back to full scan:", error);
-          this.decorations = this.scanFullDocumentForShortcodes();
+        // Skip empty lines and obvious code contexts
+        if (!lineText.trim() ||
+            lineText.trim().startsWith('```') ||
+            lineText.trim().startsWith('~~~') ||
+            lineText.startsWith('    ')) {
+          continue;
         }
+
+        // Find emoji shortcodes in this line
+        const matches = this.scanner.scanShortcodes(lineText, 0);
+
+        for (const match of matches) {
+          if (match.imagePath && match.label) {
+            const from = lineFrom + match.from;
+            const to = lineFrom + match.to;
+
+            // Validate positions
+            if (from >= 0 && to > from && to <= doc.length) {
+              // Check syntax tree context to see if this position should be filtered
+              if (!this.shouldFilterPosition(from)) {
+                this.cachedEmojiRanges.push({
+                  from,
+                  to,
+                  shortcode: match.shortcode,
+                  imagePath: match.imagePath,
+                  label: match.label
+                });
+              }
+            }
+          }
+        }
+      } catch (lineError) {
+        console.warn("Error processing line", lineNumber, lineError);
       }
     }
   }
 
+  /**
+   * OPTIMIZED: Efficient proximity-based decoration builder - only uses cached data
+   */
+  private buildDecorationsFromCache(): DecorationSet {
+    const decorations: Array<{from: number, to: number, decoration: Decoration}> = [];
+    const currentProximityState = new Map<string, boolean>();
 
+    for (const emoji of this.cachedEmojiRanges) {
+      const key = `${emoji.from}-${emoji.to}`;
+      const shouldShow = !this.shouldHideEmoji(emoji.from, emoji.to);
+      currentProximityState.set(key, shouldShow);
 
+      if (shouldShow) {
+        try {
+          const widgetDecoration = Decoration.replace({
+            widget: new EmojiWidget(emoji.shortcode, emoji.imagePath, emoji.label)
+          });
+
+          decorations.push({ from: emoji.from, to: emoji.to, decoration: widgetDecoration });
+        } catch (error) {
+          console.warn("Error creating emoji decoration:", error);
+        }
+      }
+    }
+
+    this.lastProximityState = currentProximityState;
+
+    // Create decoration set
+    if (decorations.length === 0) {
+      return Decoration.none;
+    }
+
+    // Sort and remove overlaps (shouldn't happen with our scanning, but safety first)
+    decorations.sort((a, b) => a.from - b.from);
+    const cleanDecorations = [];
+    let lastEnd = 0;
+
+    for (const dec of decorations) {
+      if (dec.from >= lastEnd) {
+        cleanDecorations.push(dec);
+        lastEnd = dec.to;
+      }
+    }
+
+    return Decoration.set(cleanDecorations.map(d => d.decoration.range(d.from, d.to)));
+  }
+
+  /**
+   * OPTIMIZED: Check if proximity state actually changed - avoids unnecessary rebuilds
+   */
+  private proximityStateChanged(): boolean {
+    for (const emoji of this.cachedEmojiRanges) {
+      const key = `${emoji.from}-${emoji.to}`;
+      const currentShouldShow = !this.shouldHideEmoji(emoji.from, emoji.to);
+      const lastShouldShow = this.lastProximityState.get(key);
+
+      if (currentShouldShow !== lastShouldShow) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Get affected ranges based on current selection/cursor position
+   */
+  private getAffectedRanges(): Array<{from: number, to: number}> {
+    const selection = this.view.state.selection.main;
+    const buffer = EmojiMarker.PROXIMITY_BUFFER;
+
+    if (selection.empty) {
+      // Single cursor position
+      return [{
+        from: selection.head - buffer,
+        to: selection.head + buffer
+      }];
+    } else {
+      // Selection range
+      return [{
+        from: selection.from - buffer,
+        to: selection.to + buffer
+      }];
+    }
+  }
+
+  /**
+   * Check if an emoji range should be hidden due to cursor proximity
+   */
+  private shouldHideEmoji(emojiFrom: number, emojiTo: number): boolean {
+    const affectedRanges = this.getAffectedRanges();
+
+    return affectedRanges.some(range => {
+      // Hide emoji if it overlaps with affected range
+      return !(emojiTo < range.from || emojiFrom > range.to);
+    });
+  }
+
+  /**
+   * OPTIMIZED: Handle document changes and selection changes with cached data
+   */
+  update(update: ViewUpdate): void {
+  if (this.destroyed || !this.emojiService.isInitialized()) return;
+
+  if (update.docChanged) {
+    // Only rebuild if the change could actually affect shortcodes
+    if (this.changeAffectsShortcodes(update)) {
+      this.rescanDocument();
+      this.decorations = this.buildDecorationsFromCache();
+    }
+    // If no shortcode-affecting changes, keep existing decorations unchanged
+  } else if (update.selectionSet) {
+    if (this.proximityStateChanged()) {
+      this.decorations = this.buildDecorationsFromCache();
+    }
+  }
+}
+
+private changeAffectsShortcodes(update: ViewUpdate): boolean {
+  let hasShortcodeChanges = false;
+
+  update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+    // Check deleted text
+    const deletedText = update.startState.doc.sliceString(fromA, toA);
+    // Check inserted text
+    const insertedText = inserted.toString();
+
+    // Rebuild if colons are involved (shortcode boundaries)
+    if (deletedText.includes(':') || insertedText.includes(':')) {
+      hasShortcodeChanges = true;
+    }
+  });
+
+  return hasShortcodeChanges;
+}
 
   /**
    * Check if a position should be filtered based on syntax tree context
@@ -149,222 +319,6 @@ class EmojiMarker {
   }
 
   /**
-   * Extract changed ranges from update with buffer zones
-   */
-  private getChangedRanges(update: ViewUpdate): Array<{from: number, to: number}> {
-    const ranges: Array<{from: number, to: number}> = [];
-    const doc = update.state.doc;
-
-    update.changes.iterChanges((fromA, toA, fromB, toB) => {
-      // Add buffer around changes to catch shortcodes that span the boundary
-      const bufferSize = 20; // characters
-      const from = Math.max(0, fromB - bufferSize);
-      const to = Math.min(doc.length, toB + bufferSize);
-
-      ranges.push({ from, to });
-    });
-
-    // Merge overlapping ranges
-    return this.mergeOverlappingRanges(ranges);
-  }
-
-  /**
-   * Merge overlapping ranges to avoid duplicate processing
-   */
-  private mergeOverlappingRanges(ranges: Array<{from: number, to: number}>): Array<{from: number, to: number}> {
-    if (ranges.length <= 1) return ranges;
-
-    ranges.sort((a, b) => a.from - b.from);
-    const merged = [ranges[0]];
-
-    for (let i = 1; i < ranges.length; i++) {
-      const current = ranges[i];
-      const last = merged[merged.length - 1];
-
-      if (current.from <= last.to) {
-        // Ranges overlap, merge them
-        last.to = Math.max(last.to, current.to);
-      } else {
-        // No overlap, add as new range
-        merged.push(current);
-      }
-    }
-
-    return merged;
-  }
-
-  /**
-   * Check if a range potentially contains shortcodes worth scanning
-   */
-  private rangeContainsPotentialShortcodes(range: {from: number, to: number}, doc: any): boolean {
-    const text = doc.sliceString(range.from, range.to);
-
-    // Quick check: does the range contain colons?
-    if (!text.includes(':')) return false;
-
-    // Check for obvious shortcode patterns
-    return /:[a-zA-Z0-9_+-]+:/.test(text);
-  }
-
-  /**
-   * Update decorations only for specified ranges (efficient targeted update)
-   */
-  private updateDecorationsForChangedRanges(ranges: Array<{from: number, to: number}>, doc: any): void {
-    // Remove old decorations in changed ranges
-    let filteredDecorations = this.decorations;
-    for (const range of ranges) {
-      filteredDecorations = filteredDecorations.update({
-        filter: (from: number, to: number) => {
-          // Keep decorations outside the changed ranges
-          return !(from >= range.from && to <= range.to);
-        }
-      });
-    }
-
-    // Build new decorations for changed ranges only
-    const newDecorations: Array<{from: number, to: number, decoration: Decoration}> = [];
-    for (const range of ranges) {
-      const rangeText = doc.sliceString(range.from, range.to);
-      // Skip empty or obviously unsafe ranges
-      if (!rangeText.trim() ||
-          rangeText.trim().startsWith('```') ||
-          rangeText.trim().startsWith('~~~')) {
-        continue;
-      }
-      // Find shortcodes in this range
-      const matches = this.scanner.scanShortcodes(rangeText, range.from);
-      for (const match of matches) {
-        if (match.imagePath && match.label) {
-          // Validate positions
-          if (match.from >= 0 && match.to <= doc.length && match.from < match.to) {
-            // Check syntax tree context to see if this position should be filtered
-            if (this.shouldFilterPosition(match.from)) {
-              continue; // Skip this match - it's in a filtered context
-            }
-
-            try {
-              const widgetDecoration = Decoration.replace({
-                widget: new EmojiWidget(match.shortcode, match.imagePath, match.label)
-              });
-              newDecorations.push({
-                from: match.from,
-                to: match.to,
-                decoration: widgetDecoration
-              });
-            } catch (error) {
-              console.warn("Error creating range decoration:", error);
-            }
-          }
-        }
-      }
-    }
-    // Merge filtered decorations with new ones
-    if (newDecorations.length > 0) {
-      newDecorations.sort((a, b) => a.from - b.from);
-      // Decoration.set returns a DecorationSet, but update expects an array of decorations
-      // So we need to extract the decorations from the DecorationSet
-      const decorationsArray: {from: number, to: number, value: Decoration}[] = [];
-      Decoration.set(newDecorations.map(d => d.decoration.range(d.from, d.to))).between(0, doc.length, (from, to, value) => {
-        decorationsArray.push({from, to, value});
-      });
-      this.decorations = filteredDecorations.update({
-        add: decorationsArray.map(d => ({from: d.from, to: d.to, value: d.value}))
-      });
-    } else {
-      this.decorations = filteredDecorations;
-    }
-  }
-
-  /**
-   * Scan the entire document for emoji shortcodes and build decorations
-   * Used for initialization and full refreshes
-   */
-  private scanFullDocumentForShortcodes(): DecorationSet {
-    try {
-      if (!this.emojiService.isInitialized()) {
-        return Decoration.none;
-      }
-
-      const doc = this.view.state.doc;
-      const decorations: Array<{from: number, to: number, decoration: Decoration}> = [];
-
-      // Process each line
-      for (let lineNumber = 1; lineNumber <= doc.lines; lineNumber++) {
-        try {
-          const line = doc.line(lineNumber);
-          const lineText = line.text;
-          const lineFrom = line.from;
-
-          // Skip empty lines and obvious code contexts
-          if (!lineText.trim() ||
-              lineText.trim().startsWith('```') ||
-              lineText.trim().startsWith('~~~') ||
-              lineText.startsWith('    ')) {
-            continue;
-          }
-
-          // Find emoji shortcodes in this line
-          const matches = this.scanner.scanShortcodes(lineText, 0);
-
-          for (const match of matches) {
-            if (match.imagePath && match.label) {
-              const from = lineFrom + match.from;
-              const to = lineFrom + match.to;
-
-              // Validate positions
-              if (from >= 0 && to > from && to <= doc.length) {
-                // Check syntax tree context to see if this position should be filtered
-                if (this.shouldFilterPosition(from)) {
-                  continue; // Skip this match - it's in a filtered context
-                }
-
-                try {
-                  // Use widget decoration to replace shortcode with emoji image
-                  const widgetDecoration = Decoration.replace({
-                    widget: new EmojiWidget(match.shortcode, match.imagePath, match.label)
-                  });
-
-                  decorations.push({ from, to, decoration: widgetDecoration });
-                } catch (error) {
-                  console.warn("Error creating emoji decoration:", error);
-                }
-              }
-            }
-          }
-        } catch (lineError) {
-          console.warn("Error processing line", lineNumber, lineError);
-        }
-      }
-
-      // Create decoration set
-      if (decorations.length === 0) {
-        return Decoration.none;
-      }
-
-      // Sort and remove overlaps
-      decorations.sort((a, b) => a.from - b.from);
-      const cleanDecorations = [];
-      let lastEnd = 0;
-
-      for (const dec of decorations) {
-        if (dec.from >= lastEnd) {
-          cleanDecorations.push(dec);
-          lastEnd = dec.to;
-        }
-      }
-
-      const decorationSet = Decoration.set(cleanDecorations.map(d => d.decoration.range(d.from, d.to)));
-
-
-      return decorationSet;
-
-    } catch (error) {
-      console.error("Error building decorations:", error);
-      return Decoration.none;
-    }
-  }
-
-  /**
    * Get current decorations
    */
   getDecorations(): DecorationSet {
@@ -372,7 +326,9 @@ class EmojiMarker {
   }
 
   /**
-   * Get atomic ranges for all emoji widgets to enable clean backspace/delete behavior
+   * Get atomic ranges for visible emoji widgets
+   * Since proximity-based hiding works at decoration level,
+   * all visible widgets should be atomic
    */
   getAtomicRanges(): any {
     const ranges: Array<{ from: number, to: number }> = [];
@@ -387,15 +343,13 @@ class EmojiMarker {
 
     // Sort ranges and create RangeSet
     ranges.sort((a, b) => a.from - b.from);
-    const rangeValues = ranges.map(range => ({ from: range.from, to: range.to }));
 
-    return RangeSet.of(rangeValues.map(r => ({
+    return RangeSet.of(ranges.map(r => ({
       from: r.from,
       to: r.to,
       value: null
     })));
   }
-
 
   /**
    * Clean up
@@ -407,7 +361,6 @@ class EmojiMarker {
       this.emojiService.offMapUpdate(this.mapUpdateHandler);
       this.mapUpdateHandler = null;
     }
-
   }
 }
 
@@ -422,17 +375,16 @@ class EmojiLiveRenderer {
   ) {}
 
   /**
-   * Create the CM6 extension with atomic ranges for optimal editing behavior
-   * Atomic ranges ensure emoji widgets act as single units for:
-   * - Clean backspace/delete (removes entire emoji)
-   * - Proper cursor navigation (skips over widgets)
-   * - Perfect copy/paste (preserves underlying shortcode text)
+   * Create the CM6 extension with conditional decoration visibility
+   * - Shows emoji widgets when cursor is far away (1+ character buffer)
+   * - Shows raw shortcode text when cursor is nearby for editing
+   * - Atomic ranges ensure visible emojis behave as single units
+   * - Perfect copy/paste (always preserves underlying shortcode text)
    */
   public getExtension(): Extension {
     const emojiService = this.emojiService;
     const app = this.app;
     const settings = this.settings;
-
 
     const emojiViewPlugin = ViewPlugin.fromClass(class {
       decorator: EmojiMarker;

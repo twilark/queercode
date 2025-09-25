@@ -86,8 +86,8 @@ The old command-line method (`npm run generate-emoji-map`) is still available fo
 ### To-Dos for v1
 
 - [ ] Complete context filtering implementation using `syntaxTree` analysis
-- [ ] Fix cursor navigation in Live Preview mode, implement better backspace/deletion handling
-- [ ] Enable dynamic emoji rendering for copied/pasted shortcodes
+- [x] Fix cursor navigation in Live Preview mode, implement better backspace/deletion handling
+- [x] Enable dynamic emoji rendering for copied/pasted shortcodes
 - [ ] Skintone & hand part default/fallback selection for humanoid emojis during map generation
 
 
@@ -96,6 +96,7 @@ The old command-line method (`npm run generate-emoji-map`) is still available fo
 - [ ] Combined emoji+modifier syntax (e.g., `:emoji::modifier:`) to apply dynamic, inline styling/behaviors
 - [ ] Support `.gif` and `.webp` files
 - [ ] Drag-and-drop UI for managing multiple asset packs
+- [ ] Compatibility e.g. with Iconic
 
 
 ---

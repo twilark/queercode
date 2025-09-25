@@ -1,17 +1,13 @@
-## 0.6.5-alpha (Latest)
+## 0.6.6-alpha (Latest)
 
-- **⚡ Widget Re-implementation:** Complete transition from mark decorations to CM6 widgets for superior stability.
-  - Replaced `Decoration.mark` approach with `Decoration.replace` + `EmojiWidget` for native DOM rendering
-  - Removed complex `MutationObserver` system and CSS background-image workarounds (~200 lines simplified)
-  - Eliminated custom keymap handlers - widgets now use CM6's built-in navigation behavior
-  - Perfect copy/paste: preserves underlying `:shortcode:` text when copying between applications
-- **☀ No more "disappearing DOM" issues**
-  - Removed safety rebuild timers - widgets provide inherent stability
-  - Streamlined update cycle follows proper CM6 patterns
-- **Updated README:** Now uses correct directory structure, updated roadmap & known issues
+- **Milestone:** Fully stable CM6 widget implementation achieved 🎉
+- **TODO**
+  - Complete context filtering
+  - Robust map generation
 
 ---
 
+0.6.5-alpha: selection / navigation through shortcodes greatly improved, with known issues
 0.6.4-alpha: comprehensive CSS styling in attempt to resolve navigation / context issues
 0.6.3-alpha: third attempt at backspace / cursor navigation since mark implementation
 0.6.2-alpha: reverted keymap handlers to attempt to address cursor handling issues
