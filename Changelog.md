@@ -1,12 +1,14 @@
-## 0.6.6-alpha (Latest)
+## 0.7.0-alpha (Latest)
 
-- **Milestone:** Fully stable CM6 widget implementation achieved 🎉
+- **Milestone:** Robust context filtering based on Lezer grammars + CM6 implementation
+  - May need more comprehensive testing
+  - Currently focused on URL and code (fenced + inline) handling
 - **TODO**
-  - Complete context filtering
   - Robust map generation
 
 ---
 
+0.6.7-alpha: Milestone - fully stable CM6 widget implementation
 0.6.5-alpha: selection / navigation through shortcodes greatly improved, with known issues
 0.6.4-alpha: comprehensive CSS styling in attempt to resolve navigation / context issues
 0.6.3-alpha: third attempt at backspace / cursor navigation since mark implementation
