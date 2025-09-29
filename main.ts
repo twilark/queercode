@@ -1,9 +1,9 @@
 import { Plugin, Notice } from "obsidian";
 import { QueercodeSettingsData, DEFAULT_SETTINGS, QueercodeSettings } from "./ui/QueercodeSettings";
-import { EmojiPicker } from "./EmojiPicker";
+import { EmojiPicker } from "./ui/EmojiPicker";
 import { EmojiCooker } from "./services/EmojiCooker";
-import { EmojiStatic } from "./rendering/EmojiStatic";
-import { EmojiLive } from "./rendering/EmojiLive";
+import { EmojiStatic } from "./rendering/static/EmojiStatic";
+import { EmojiLive } from "./rendering/live/EmojiLive";
 
 export default class QueercodePlugin extends Plugin {
   settings!: QueercodeSettingsData;
@@ -23,7 +23,7 @@ export default class QueercodePlugin extends Plugin {
       this.settings.emojiFolderPath || "",      // Use the emoji folder path from settings
       this.settings.filetypePreference || "svg" // Provide default if undefined
     );
-    await this.emojiService.load();
+    await this.emojiService.load(this.settings.preserveInvalidEntries);
 
     // Check if we have any emojis to work with
     if (!this.emojiService.isInitialized()) {
@@ -49,15 +49,13 @@ export default class QueercodePlugin extends Plugin {
       // Don't return - allow the plugin to load
     }
 
-    this.emojiCompleter = new EmojiPicker(this.app, emojiMap, emojiFiles);
+    this.emojiCompleter = new EmojiPicker(this.app, this.emojiService);
     this.registerEditorSuggest(this.emojiCompleter);
 
     // Set up emoji suggester to refresh when map updates
     this.emojiService.onMapUpdate(() => {
       if (this.emojiCompleter && this.emojiCompleter.refresh) {
-        const emojiMap = this.emojiService.getEmojiMap();
-        const emojiFiles = this.emojiService.getAvailableFiles();
-        this.emojiCompleter.refresh(emojiMap, emojiFiles);
+        this.emojiCompleter.refresh();
       }
 
       // Live preview refreshes automatically via map update handlers
@@ -69,7 +67,7 @@ export default class QueercodePlugin extends Plugin {
       this,  // Pass the plugin instance as required by PluginSettingTab
       this.settings,
       () => this.saveSettings(),
-      () => this.emojiService.buildMap()  // Emoji map builder callback
+      () => this.emojiService.buildMap(this.settings.preserveInvalidEntries)  // Emoji map builder callback
     ));
   }
 

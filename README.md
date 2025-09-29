@@ -1,102 +1,82 @@
 # queercode 🌈
 
-**Custom emoji shortcodes for Obsidian**, styled for visibility, fun, and flair.
+**Add your own custom emojis to Obsidian with simple `:shortcode:` syntax.**
 
-This plugin lets you use shortcodes like `:blue_potion:` or `:furry_pride:` directly in Obsidian notes. These render as inline emoji PNGs or SVGs, styled to look good in normal text, headers, callouts, and tables.
+Drop your emoji images (PNG/SVG) into a folder, and instantly use them in your Obsidian notes like `:blue_potion:` or `:furry_pride:`. Perfect for adding personality to your notes with custom graphics, pride flags, gaming icons, or any images you want to use as emojis.
+
+**Quick example**: Save `ace_heart.png` in your emoji folder → type `:ace_heart:` in any note → see your custom heart emoji! 🖤🩶🤍💜
 
 > [!NOTE]
-> ### **Who is this for?**
+> ### **Why use this?**
 >
-> - Obsidian users who:
-> - Value colorful emoji in their visual hierarchy and notetaking,
-> - Who are constrained by their device's ability to display specific Unicode characters cleanly within Obsidian (i.e. stubborn Win10 users 💜),
-> - And/or who are unsatisfied with other Emoji-based plugins
+> - **Your own emojis**: Use any PNG/SVG images as emojis, not just standard Unicode ones
+> - **Better emoji support**: Great for Windows 10 users or anyone who wants consistent emoji rendering
+> - **Visual note-taking**: Add custom graphics, symbols, or icons that match your workflow
+> - **Community assets**: Easily share emoji packs with friends or import ones others have made
 
 ---
 
 ## ✨ Features
 
-- **Custom Emoji and Shortcodes:** Define and use custom emoji with easy `:shortcode:` syntax, auto-generated emoji map from your emoji image folder. Specify a custom folder for your emoji assets anywhere in your vault.
-- **Autocomplete Suggestions:** An intelligent suggester activates as you type shortcodes, providing a fuzzy-searched list of options.
-- **Consistent, Accessible Rendering:** Emojis render with ARIA labels and consistent styling across various contexts, including tables, headers, and callouts.
-- **Filetype Support:** Supports `.png` and `.svg` emoji images; set your preferred file type in settings.
+- **Simple Setup**: Drop images in a folder, click "Generate Emoji Map" in settings, and you're done
+- **Smart Autocomplete**: Type `:cat` and see all your cat-related emojis pop up as suggestions
+- **Works Everywhere**: Your emojis look great in tables, headers, lists, and callouts across editing and preview modes
+- **Flexible**: Supports PNG and SVG files, choose your preferred format in settings
 
 ---
 
 ## 📦 Installation
 
-### From source
+**Note**: This plugin is currently distributed via GitHub only
 
-1. Clone the repo into your `.obsidian/plugins/` folder.
-2. Run:
+1. **Download**: Clone or download this repo to your vault's `.obsidian/plugins/queercode/` folder
+2. **Build**: Open a terminal in the plugin folder and run:
    ```bash
    npm install
    npm run build
    ```
-3. Enable the plugin in Obsidian. If you don't see it, ensure Community Plugins are enabled.
+3. **Enable**: Go to Settings → Community Plugins → Enable "Queercode"
+   - You may need to enable "Community plugins" in Obsidian settings first.
 
 ---
 
-### Directory layout
-
-```
-queercode/
-├── main.ts                    # Core plugin logic and entry point
-├── services/EmojiCooker.ts    # Central emoji service (renamed from EmojiService)
-├── rendering/EmojiStatic.ts   # TreeWalker renderer for Reading Mode
-├── rendering/EmojiLive.ts     # CM6 widget renderer for Live Preview
-├── rendering/EmojiWidget.ts   # CM6 widget implementation
-├── ui/QueercodeSettings.ts    # Settings UI and configuration
-├── EmojiSuggest.ts           # Autocomplete suggester implementation
-├── MapHandler.ts             # File system operations for emoji maps
-├── emoji-map.json            # Generated shortcode-to-filename mapping
-└── ... other files
-```
+### Key Files
+- **`emoji/`** - Put your emoji images (SVG/PNG) here
+- **`data/emoji-map.json`** - Maps shortcodes to your image filenames (auto-generated)
 
 ---
 
 ## 🛠️ Adding New Emojis
 
-The primary way to update your emoji list is now through the Obsidian settings GUI.
+1. **Add images**: Drop `.png` or `.svg` files into your emoji folder (default: `emoji/` in your vault)
+2. **Update the list**: Go to Settings → Community Plugins → Queercode → Click "Generate Emoji Map"
+3. **Start using them**: Type `:filename:` (without the file extension) in your notes
 
-1.  Add new `.png` or `.svg` files to your designated emoji folder.
-2.  In Obsidian, go to `Settings` -> `Community Plugins` -> `Queercode`.
-3.  Click the **"Generate Emoji Map"** button. The plugin will scan for new files, update the map, and prune any entries for deleted files.
+**Example**: Save `cool_cat.png` → use `:cool_cat:` in your notes
 
-The old command-line method (`npm run generate-emoji-map`) is still available for developers.
+The plugin automatically converts filenames to shortcodes and cleans up deleted files.
 
 ---
 
-## 📌 Notes
+## 📌 Good to Know
 
-- Your images **must** be `.png` or `.svg` format
-- Filenames become shortcodes automatically: `bisexual_flag.png` → `:bisexual_flag:` Autocomplete triggers only after typing at least one character after `:`
-- These shortcodes can be safely changed, but user is responsible for ensuring unique entries
-- Custom entries in `emoji-map.json` should not be overwritten even if the map must be regenerated
-- **Not all emojis are covered, and some will never be.** Please see Mutant Standard documentation for more information
-- **Known Issues:**
-  - Context filtering: Emojis may render inside code contexts when disabled in settings
-  - Dynamic updates: Copied/pasted shortcodes may not always render immediately
-  - Cursor navigation: Widget range is sometimes >1, backspace/navigation does not expose the shortcode
+- **File formats**: Use `.png` or `.svg` images for best results
+- **Shortcode naming**: Filenames become shortcodes automatically (`cool_cat.png` → `:cool_cat:`); these can be safely customized and will not be overwritten if a new emoji map is generated (example: if you edit `:nonbinary_flag:` → `:nb_flag:`)
+- **Autocomplete**: Start typing after `:` to see suggestions
+- **Custom edits**: You can manually edit `data/emoji-map.json` if needed
+- **Included assets**: This plugin comes with [Mutant Standard](https://mutant.tech/) emojis as examples. Please note that not every emoji will be covered by Mutant Standard
+
+**Current limitations**: Performance issues in Live Preview rendering - expect a slight delay after completing an emoji
 
 ---
 
 ## 📋 Roadmap
-
-### To-Dos for v1
-
-- [ ] Complete context filtering implementation using `syntaxTree` analysis
-- [x] Fix cursor navigation in Live Preview mode, implement better backspace/deletion handling
-- [x] Enable dynamic emoji rendering for copied/pasted shortcodes
-- [ ] Skintone & hand part default/fallback selection for humanoid emojis during map generation
-
-
-### Beyond v1
-
-- [ ] Combined emoji+modifier syntax (e.g., `:emoji::modifier:`) to apply dynamic, inline styling/behaviors
-- [ ] Support `.gif` and `.webp` files
-- [ ] Drag-and-drop UI for managing multiple asset packs
-- [ ] Compatibility e.g. with Iconic
+### Coming Soon
+- [ ] Enhanced emoji variants (skin tones, etc.) with smart defaults
+- [ ] Support for `.gif` and `.webp` animated emojis
+- [ ] Drag-and-drop emoji pack management
+- [ ] Better integration with other Obsidian plugins
+- [ ] Emoji modifier syntax (`:emoji::modifier:`) for dynamic styling
 
 
 ---

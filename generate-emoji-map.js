@@ -3,7 +3,7 @@ const path = require("path");
 
 async function generateEmojiMap() {
   const emojiDir = path.resolve(__dirname, "emoji");
-  const mapPath = path.resolve(__dirname, "emoji-map.json");
+  const mapPath = path.resolve(__dirname, "data/emoji-map.json");
 
   let existingMap = {};
 
@@ -67,7 +67,7 @@ async function generateEmojiMap() {
   await writeFile(mapPath, jsonContent, "utf-8");
 
   console.log(
-    `emoji-map.json updated: ${addedCount} new entr${
+    `data/emoji-map.json updated: ${addedCount} new entr${
       addedCount === 1 ? "y" : "ies"
     } added, total ${sortedKeys.length} entries.`
   );

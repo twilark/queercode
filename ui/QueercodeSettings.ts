@@ -9,6 +9,8 @@ export interface QueercodeSettingsData {
   renderInUrls: boolean;
   renderInFrontmatter: boolean;
   renderInComments: boolean;
+  // Emoji map management settings
+  preserveInvalidEntries: boolean;
 }
 
 export const DEFAULT_SETTINGS: QueercodeSettingsData = {
@@ -19,7 +21,9 @@ export const DEFAULT_SETTINGS: QueercodeSettingsData = {
   renderInInlineCode: false,
   renderInUrls: false,
   renderInFrontmatter: false,
-  renderInComments: true
+  renderInComments: true,
+  // Default to pruning invalid entries (current behavior)
+  preserveInvalidEntries: false
 };
 
 export class QueercodeSettings extends PluginSettingTab {
@@ -151,6 +155,18 @@ export class QueercodeSettings extends PluginSettingTab {
       text: "Generate or update the emoji map from files in your emoji folder. This will scan for .png and .svg files and create shortcodes automatically."
     });
     mapInfo.addClass("setting-item-description");
+
+    new Setting(containerEl)
+      .setName("Preserve invalid emoji entries")
+      .setDesc("Keep emoji shortcodes in the map even when their image files are missing. When disabled, missing entries will be removed during map generation and runtime loading.")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.settings.preserveInvalidEntries)
+          .onChange(async (value) => {
+            this.settings.preserveInvalidEntries = value;
+            await this.saveSettings();
+          })
+      );
 
     new Setting(containerEl)
       .setName("Emoji map generation")

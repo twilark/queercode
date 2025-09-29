@@ -3,12 +3,19 @@
   "version": "0.7.0",
   "scripts": {
     "build": "esbuild main.ts --bundle --outfile=main.js --format=cjs --target=es2020 --platform=node --external:obsidian --external:@codemirror/state --external:@codemirror/view --external:@codemirror/language",
-    "generate-emoji-map": "node generate-emoji-map.js"
+    "generate-emoji-map": "node generate-emoji-map.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "devDependencies": {
     "esbuild": "^0.25.5",
-    "obsidian": "^1.9.0",
-    "typescript": "^5.0.0"
+    "obsidian": "^1.8.7",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "jest-environment-jsdom": "^29.0.0",
+    "ts-jest": "^29.0.0"
   },
   "dependencies": {
     "fuzzysort": "^3.1.0"
